@@ -1,103 +1,152 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { db, auth } from './firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getFirestore, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { firebaseApp } from './firebase-config'; // Firebase configuration
 
-const App = () => {
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+
+function App() {
   const [user, setUser] = useState(null);
+  const [newPatient, setNewPatient] = useState({ name: '', age: '', gender: '', diagnosis: '' });
   const [patients, setPatients] = useState([]);
-  const [medicine, setMedicine] = useState([]);
-  
-  const handleLogin = async (email, password) => {
+  const [isSignUp, setIsSignUp] = useState(false); // State to toggle between login and signup forms
+
+  // Firebase Authentication state monitoring
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Handle Sign-Up
+  const signUpUser = async (e) => {
+    e.preventDefault();
+    const { email, password } = e.target.elements;
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, email.value, password.value);
+      setIsSignUp(false); // Switch to login form after successful sign-up
     } catch (error) {
-      console.error("Login error: ", error);
+      alert('Sign-up failed: ' + error.message);
     }
   };
 
-  const handleSignup = async (email, password) => {
+  // Handle Login
+  const loginUser = async (e) => {
+    e.preventDefault();
+    const { email, password } = e.target.elements;
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.value, password.value);
     } catch (error) {
-      console.error("Signup error: ", error);
+      alert('Login failed: ' + error.message);
     }
   };
 
-  const handleLogout = async () => {
+  // Handle Logout
+  const logoutUser = async () => {
     await signOut(auth);
   };
 
-  const addPatient = async (patientData) => {
-    const user = auth.currentUser;
+  // Add Patient Data
+  const addPatient = async (e) => {
+    e.preventDefault();
     if (user) {
-      await addDoc(collection(db, 'patients'), { uid: user.uid, ...patientData });
+      await addDoc(collection(db, 'patients'), { ...newPatient, uid: user.uid });
+      setNewPatient({ name: '', age: '', gender: '', diagnosis: '' });
+    } else {
+      alert('You must be logged in to add a patient.');
     }
   };
 
-  const addMedicine = async (medicineData) => {
-    const user = auth.currentUser;
-    if (user) {
-      await addDoc(collection(db, 'inventory'), { uid: user.uid, ...medicineData });
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
+  // Fetch Patients Data
   useEffect(() => {
     if (user) {
-      const fetchData = async () => {
-        const patientsSnapshot = await getDocs(query(collection(db, 'patients'), where('uid', '==', user.uid)));
-        setPatients(patientsSnapshot.docs.map(doc => doc.data()));
-
-        const medicineSnapshot = await getDocs(query(collection(db, 'inventory'), where('uid', '==', user.uid)));
-        setMedicine(medicineSnapshot.docs.map(doc => doc.data()));
+      const fetchPatients = async () => {
+        const q = query(collection(db, 'patients'), where('uid', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+        setPatients(querySnapshot.docs.map(doc => doc.data()));
       };
-      fetchData();
+      fetchPatients();
     }
   }, [user]);
 
   return (
-    <div className="App">
-      {user ? (
+    <div>
+      <h1>Clinic & Pharmacy Dashboard</h1>
+
+      {/* Conditional rendering based on whether the user is signed in */}
+      {!user ? (
         <div>
-          <h1>Welcome {user.email}</h1>
-          <button onClick={handleLogout}>Logout</button>
+          {/* Toggle between login and sign-up */}
+          {isSignUp ? (
+            <form onSubmit={signUpUser}>
+              <h2>Sign Up</h2>
+              <input type="email" name="email" placeholder="Email" required />
+              <input type="password" name="password" placeholder="Password" required />
+              <button type="submit">Sign Up</button>
+            </form>
+          ) : (
+            <form onSubmit={loginUser}>
+              <h2>Login</h2>
+              <input type="email" name="email" placeholder="Email" required />
+              <input type="password" name="password" placeholder="Password" required />
+              <button type="submit">Login</button>
+            </form>
+          )}
 
-          <h2>Add Patient</h2>
-          <button onClick={() => addPatient({ name: "John Doe", age: 30, gender: "Male", diagnosis: "Flu" })}>Add Patient</button>
-
-          <h2>Add Medicine</h2>
-          <button onClick={() => addMedicine({ medicine_name: "Aspirin", quantity: 50, expiry_date: "2025-12-31", supplier: "Pharma Corp" })}>Add Medicine</button>
-
-          <h2>Patients</h2>
-          <ul>
-            {patients.map((patient, index) => (
-              <li key={index}>{patient.name}</li>
-            ))}
-          </ul>
-
-          <h2>Medicine</h2>
-          <ul>
-            {medicine.map((med, index) => (
-              <li key={index}>{med.medicine_name}</li>
-            ))}
-          </ul>
+          <button onClick={() => setIsSignUp(!isSignUp)}>
+            {isSignUp ? 'Already have an account? Login' : 'New here? Sign Up'}
+          </button>
         </div>
       ) : (
         <div>
-          <h2>Login</h2>
-          <input type="email" placeholder="Email" />
-          <input type="password" placeholder="Password" />
-          <button onClick={() => handleLogin("email@example.com", "password123")}>Login</button>
+          <h2>Welcome, {user.email}</h2>
+          <button onClick={logoutUser}>Logout</button>
 
-          <h2>Signup</h2>
-          <input type="email" placeholder="Email" />
-          <input type="password" placeholder="Password" />
-          <button onClick={() => handleSignup("newuser@example.com", "password123")}>Signup</button>
+          <form onSubmit={addPatient}>
+            <h2>Add Patient</h2>
+            <input
+              type="text"
+              placeholder="Name"
+              value={newPatient.name}
+              onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="Age"
+              value={newPatient.age}
+              onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Gender"
+              value={newPatient.gender}
+              onChange={(e) => setNewPatient({ ...newPatient, gender: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Diagnosis"
+              value={newPatient.diagnosis}
+              onChange={(e) => setNewPatient({ ...newPatient, diagnosis: e.target.value })}
+            />
+            <button type="submit">Add Patient</button>
+          </form>
+
+          <h3>Patients</h3>
+          <ul>
+            {patients.map((patient, index) => (
+              <li key={index}>
+                {patient.name} - {patient.diagnosis}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
@@ -105,4 +154,3 @@ const App = () => {
 }
 
 export default App;
-
