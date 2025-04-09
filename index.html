@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinic & Pharmacy Dashboard</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "My api key",
+      authDomain: "clinic-farm.firebaseapp.com",
+      projectId: "clinic-farm",
+      storageBucket: "clinic-farm.firebasestorage.app",
+      messagingSenderId: "914634948650",
+      appId: "1:914634948650:web:0cd9c9dd7b59a6995a0353",
+      measurementId: "G-CX0SHLQ8MW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function addPatient(e) {
+      e.preventDefault();
+      const name = document.getElementById("p-name").value;
+      const age = parseInt(document.getElementById("p-age").value);
+      const gender = document.getElementById("p-gender").value;
+      const diagnosis = document.getElementById("p-diagnosis").value;
+
+      await addDoc(collection(db, "patients"), {
+        name, age, gender, diagnosis, visit_date: new Date()
+      });
+      alert("Patient added!");
+    }
+
+    async function addMedicine(e) {
+      e.preventDefault();
+      const medicine_name = document.getElementById("m-name").value;
+      const quantity = parseInt(document.getElementById("m-quantity").value);
+      const expiry_date = document.getElementById("m-expiry").value;
+      const supplier = document.getElementById("m-supplier").value;
+
+      await addDoc(collection(db, "inventory"), {
+        medicine_name, quantity,
+        expiry_date: new Date(expiry_date),
+        supplier
+      });
+      alert("Medicine added!");
+    }
+
+    document.getElementById("patient-form").addEventListener("submit", addPatient);
+    document.getElementById("medicine-form").addEventListener("submit", addMedicine);
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    form {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+    }
+    input, select, button {
+      display: block;
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Clinic & Pharmacy Dashboard</h1>
+
+  <form id="patient-form">
+    <h2>Add Patient</h2>
+    <input id="p-name" type="text" placeholder="Name" required />
+    <input id="p-age" type="number" placeholder="Age" required />
+    <select id="p-gender" required>
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+    <input id="p-diagnosis" type="text" placeholder="Diagnosis" required />
+    <button type="submit">Add Patient</button>
+  </form>
+
+  <form id="medicine-form">
+    <h2>Add Medicine</h2>
+    <input id="m-name" type="text" placeholder="Medicine Name" required />
+    <input id="m-quantity" type="number" placeholder="Quantity" required />
+    <input id="m-expiry" type="date" required />
+    <input id="m-supplier" type="text" placeholder="Supplier" required />
+    <button type="submit">Add Medicine</button>
+  </form>
+</body>
+</html>
