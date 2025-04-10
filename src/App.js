@@ -6,7 +6,10 @@ import Dashboard from "./Dashboard";
 import PatientManagement from './components/PatientManagement';
 import Inventory from "./pages/Inventory";
 
-<Route path="/inventory" element={<Inventory />} />
+<Routes>
+  {/* other routes */}
+  <Route path="/inventory" element={<Inventory />} />
+</Routes>
 
 
 function App() {
