@@ -1,95 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../firebase-config'; // Correct import for Firebase
-import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
+import React, { useState } from 'react';
+import { jsPDF } from "jspdf";
 
 const Billing = () => {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [total, setTotal] = useState(0);
+  const [products, setProducts] = useState([
+    { name: 'Product A', price: 10, quantity: 2 },
+    { name: 'Product B', price: 20, quantity: 1 },
+    { name: 'Product C', price: 5, quantity: 5 },
+  ]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      const productCollection = collection(db, 'inventory');
-      const productSnapshot = await getDocs(productCollection);
-      const productList = productSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setProducts(productList);
-    };
-    fetchProducts();
-  }, []);
-
-  const addToCart = (product, quantity) => {
-    const newCart = [...cart];
-    const existingProduct = newCart.find(item => item.id === product.id);
-    if (existingProduct) {
-      existingProduct.quantity += quantity;
-    } else {
-      newCart.push({ ...product, quantity });
-    }
-    setCart(newCart);
-    updateTotal(newCart);
+  // Calculate total bill
+  const calculateTotal = () => {
+    return products.reduce((total, product) => total + (product.price * product.quantity), 0);
   };
 
-  const updateTotal = (newCart) => {
-    let newTotal = 0;
-    newCart.forEach(item => {
-      newTotal += item.price * item.quantity;
+  // Function to download the bill as a PDF
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('Invoice', 14, 22);
+    
+    // Product List
+    doc.setFontSize(12);
+    let yOffset = 30;
+    products.forEach((product, index) => {
+      doc.text(`${index + 1}. ${product.name} - $${product.price} x ${product.quantity}`, 14, yOffset);
+      yOffset += 10;
     });
-    setTotal(newTotal);
+
+    // Total
+    doc.text(`Total: $${calculateTotal()}`, 14, yOffset);
+
+    // Save the PDF
+    doc.save('invoice.pdf');
   };
 
-  const handleCheckout = async () => {
-    // Create a new sale in Firestore
-    const saleData = {
-      products: cart,
-      totalAmount: total,
-      date: new Date().toISOString(),
-    };
-    await addDoc(collection(db, 'sales'), saleData);
-
-    // Update stock quantities
-    cart.forEach(async (item) => {
-      const productDoc = doc(db, 'inventory', item.id);
-      await updateDoc(productDoc, {
-        quantity: item.quantity - 1,
-      });
-    });
-
-    // Clear the cart
-    setCart([]);
-    setTotal(0);
-    alert("Sale recorded successfully!");
+  // Function to print the bill
+  const printBill = () => {
+    const printContent = document.getElementById('billContent');
+    const printWindow = window.open('', '', 'height=600,width=800');
+    printWindow.document.write('<html><head><title>Invoice</title></head><body>');
+    printWindow.document.write(printContent.innerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
   };
 
   return (
     <div>
       <h2>Billing Page</h2>
-      <div>
-        <h3>Products</h3>
-        <ul>
-          {products.map(product => (
-            <li key={product.id}>
-              {product.name} - ${product.price} 
-              <button onClick={() => addToCart(product, 1)}>Add to Cart</button>
-            </li>
-          ))}
-        </ul>
+      <div id="billContent">
+        <h3>Invoice</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Quantity</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product, index) => (
+              <tr key={index}>
+                <td>{product.name}</td>
+                <td>${product.price}</td>
+                <td>{product.quantity}</td>
+                <td>${product.price * product.quantity}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <h4>Total: ${calculateTotal()}</h4>
       </div>
-
-      <div>
-        <h3>Cart</h3>
-        <ul>
-          {cart.map(item => (
-            <li key={item.id}>
-              {item.name} - {item.quantity} x ${item.price} = ${item.quantity * item.price}
-            </li>
-          ))}
-        </ul>
-        <h4>Total: ${total}</h4>
-        <button onClick={handleCheckout}>Checkout</button>
-      </div>
+      
+      {/* Buttons for downloading as PDF and printing */}
+      <button onClick={downloadPDF}>Download PDF</button>
+      <button onClick={printBill}>Print</button>
     </div>
   );
 };
