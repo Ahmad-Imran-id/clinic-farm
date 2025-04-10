@@ -3,6 +3,16 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./Login";
 import Signup from "./Signup";
 import Dashboard from "./Dashboard";
+import PatientManagement from './components/PatientManagement';
+
+function App() {
+  return (
+    <div>
+      <PatientManagement />
+    </div>
+  );
+}
+
 
 function App() {
   return (
