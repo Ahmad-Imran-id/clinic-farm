@@ -5,19 +5,21 @@ import Signup from "./Signup";
 import Dashboard from "./Dashboard";
 import PatientManagement from './components/PatientManagement';
 import Inventory from "./pages/Inventory";
+import Billing from './pages/Billing'; // Import Billing page
 
 function App() {
   return (
     <Router>
       <div className="App">
         <nav>
-          <Link to="/login">Login</Link> | <Link to="/signup">Sign Up</Link> | <Link to="/dashboard">Dashboard</Link> | <Link to="/inventory">Inventory</Link>
+          <Link to="/login">Login</Link> | <Link to="/signup">Sign Up</Link> | <Link to="/dashboard">Dashboard</Link> | <Link to="/inventory">Inventory</Link> | <Link to="/billing">Billing</Link>
         </nav>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/billing" element={<Billing />} /> {/* Add Billing route */}
         </Routes>
       </div>
     </Router>
