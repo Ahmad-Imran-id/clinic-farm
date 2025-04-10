@@ -4,6 +4,10 @@ import Login from "./Login";
 import Signup from "./Signup";
 import Dashboard from "./Dashboard";
 import PatientManagement from './components/PatientManagement';
+import Inventory from "./pages/Inventory";
+
+<Route path="/inventory" element={<Inventory />} />
+
 
 function App() {
   return (
