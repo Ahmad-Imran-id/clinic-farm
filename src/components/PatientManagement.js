@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { db } from './firebase-config';
+import { db, auth } from '../firebase-config'; // Correct the path
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const PatientManagement = () => {
