@@ -1,3 +1,4 @@
+// Add this import if not already present
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
 import {
@@ -11,14 +12,16 @@ import {
 import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
 
-
 const Inventory = () => {
   const [products, setProducts] = useState([]);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', quantity: '' });
-  const [bulkProducts, setBulkProducts] = useState([{ name: '', price: '', quantity: '' }]);
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', quantity: '', category: 'Tablet' });
+  const [bulkProducts, setBulkProducts] = useState([{ name: '', price: '', quantity: '', category: 'Tablet' }]);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const categories = ['Tablet', 'Injection', 'Syrup', 'Ointment', 'Other'];
 
   useEffect(() => {
     fetchProducts();
@@ -35,11 +38,13 @@ const Inventory = () => {
   };
 
   const handleAddOrUpdateProduct = async () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.quantity) return alert('Please fill all fields');
+    const { name, price, quantity, category } = newProduct;
+    if (!name || !price || !quantity || !category) return alert('Please fill all fields');
     const productData = {
-      name: newProduct.name,
-      price: parseFloat(newProduct.price),
-      quantity: parseInt(newProduct.quantity),
+      name,
+      price: parseFloat(price),
+      quantity: parseInt(quantity),
+      category,
     };
     if (editingItem) {
       await updateDoc(doc(db, 'inventory', editingItem.id), productData);
@@ -48,14 +53,14 @@ const Inventory = () => {
       await addDoc(collection(db, 'inventory'), productData);
       alert('Product added');
     }
-    setNewProduct({ name: '', price: '', quantity: '' });
+    setNewProduct({ name: '', price: '', quantity: '', category: 'Tablet' });
     setEditingItem(null);
     fetchProducts();
   };
 
   const handleEdit = item => {
     setEditingItem(item);
-    setNewProduct({ name: item.name, price: item.price, quantity: item.quantity });
+    setNewProduct({ name: item.name, price: item.price, quantity: item.quantity, category: item.category || 'Tablet' });
   };
 
   const handleDelete = async id => {
@@ -71,21 +76,22 @@ const Inventory = () => {
   };
 
   const addBulkRow = () => {
-    setBulkProducts([...bulkProducts, { name: '', price: '', quantity: '' }]);
+    setBulkProducts([...bulkProducts, { name: '', price: '', quantity: '', category: 'Tablet' }]);
   };
 
   const handleBulkSubmit = async () => {
     for (const p of bulkProducts) {
-      if (p.name && p.price && p.quantity) {
+      if (p.name && p.price && p.quantity && p.category) {
         await addDoc(collection(db, 'inventory'), {
           name: p.name,
           price: parseFloat(p.price),
           quantity: parseInt(p.quantity),
+          category: p.category,
         });
       }
     }
     alert('Bulk items added!');
-    setBulkProducts([{ name: '', price: '', quantity: '' }]);
+    setBulkProducts([{ name: '', price: '', quantity: '', category: 'Tablet' }]);
     fetchProducts();
   };
 
@@ -109,6 +115,12 @@ const Inventory = () => {
     }
   };
 
+  const filteredProducts = products.filter(product => {
+    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+    const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   const handleSuggestionClick = name => {
     setSearchQuery(name);
     setSuggestions([]);
@@ -118,7 +130,7 @@ const Inventory = () => {
     <div style={{ padding: '20px' }}>
       <h2>Inventory Management</h2>
 
-      {/* Search with auto-suggestions */}
+      {/* Search */}
       <div>
         <input
           type="text"
@@ -135,16 +147,21 @@ const Inventory = () => {
         </ul>
       </div>
 
-      {/* Single Add/Edit Form */}
+      {/* Single Add/Edit */}
       <div>
         <h3>{editingItem ? 'Edit Product' : 'Add Product'}</h3>
         <input name="name" placeholder="Name" value={newProduct.name} onChange={handleInputChange} />
         <input name="price" placeholder="Price" value={newProduct.price} onChange={handleInputChange} />
         <input name="quantity" placeholder="Quantity" value={newProduct.quantity} onChange={handleInputChange} />
+        <select name="category" value={newProduct.category} onChange={handleInputChange}>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
         <button onClick={handleAddOrUpdateProduct}>{editingItem ? 'Update' : 'Add'}</button>
       </div>
 
-      {/* Bulk Add Form */}
+      {/* Bulk Add */}
       <div>
         <h3>Bulk Add</h3>
         {bulkProducts.map((item, index) => (
@@ -152,6 +169,11 @@ const Inventory = () => {
             <input name="name" placeholder="Name" value={item.name} onChange={(e) => handleBulkChange(index, e)} />
             <input name="price" placeholder="Price" value={item.price} onChange={(e) => handleBulkChange(index, e)} />
             <input name="quantity" placeholder="Quantity" value={item.quantity} onChange={(e) => handleBulkChange(index, e)} />
+            <select name="category" value={item.category} onChange={(e) => handleBulkChange(index, e)}>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
         ))}
         <button onClick={addBulkRow}>Add More</button>
@@ -160,14 +182,27 @@ const Inventory = () => {
 
       <button onClick={exportToExcel}>Download Inventory Excel</button>
 
-      {/* Inventory Display Table */}
+      {/* Inventory Table */}
       <div style={{ marginTop: '30px' }}>
         <h3>Current Inventory</h3>
         <button onClick={fetchProducts}>Refresh Inventory</button>
+
+        {/* Category Filter */}
+        <div style={{ margin: '10px 0' }}>
+          <label>Filter by Category: </label>
+          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+            <option value="All">All</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
         <table border="1" cellPadding="10" style={{ marginTop: '10px', width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th>Name</th>
+              <th>Category</th>
               <th>Price</th>
               <th>Quantity</th>
               <th>QR Code</th>
@@ -175,9 +210,10 @@ const Inventory = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map(item => (
+            {filteredProducts.map(item => (
               <tr key={item.id}>
                 <td>{item.name}</td>
+                <td>{item.category || 'Uncategorized'}</td>
                 <td>${item.price}</td>
                 <td>{item.quantity}</td>
                 <td>
