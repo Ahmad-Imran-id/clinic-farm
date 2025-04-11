@@ -11,3 +11,22 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+/* other existing styles */
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #bill-print-area, #bill-print-area * {
+    visibility: visible;
+  }
+  #bill-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+    background: white;
+  }
+}
+
