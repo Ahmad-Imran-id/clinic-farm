@@ -109,16 +109,18 @@ useEffect(() => {
       </div>
 
       <div id="bill-print-area" ref={billRef}>
-        <h3>Cart</h3>
-        <ul>
-          {cart.map(item => (
-            <li key={item.id}>
-              {item.name} - {item.quantity} x ${item.price} = ${item.quantity * item.price}
-            </li>
-          ))}
-        </ul>
-        <h4>Total: ${total}</h4>
-      </div>
+  <h3>Invoice Number: {invoiceNumber}</h3>
+  <h3>Cart</h3>
+  <ul>
+    {cart.map(item => (
+      <li key={item.id}>
+        {item.name} - {item.quantity} x ${item.price} = ${item.quantity * item.price}
+      </li>
+    ))}
+  </ul>
+  <h4>Total: ${total}</h4>
+</div>
+
 
       <button onClick={handleCheckout}>Checkout</button>
       <button onClick={exportToPDF}>Download PDF</button>
