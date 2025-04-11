@@ -56,26 +56,34 @@ useEffect(() => {
   setInvoiceNumber(generateInvoiceNumber());
 }, []);
 
-  
-  const handleCheckout = async () => {
-    await addDoc(collection(db, 'sales'), {
-      invoiceNumber,
-      products: cart,
-      totalAmount: total,
-      date: new Date().toISOString(),
-    });
 
-    for (const item of cart) {
-      const itemRef = doc(db, 'inventory', item.id);
+const handleCheckout = async () => {
+  await addDoc(collection(db, 'sales'), {
+    invoiceNumber,
+    products: cart,
+    totalAmount: total,
+    date: new Date().toISOString(),
+  });
+
+  for (const item of cart) {
+    const itemRef = doc(db, 'inventory', item.id);
+    const itemSnap = await getDoc(itemRef);
+
+    if (itemSnap.exists()) {
+      const existingData = itemSnap.data();
+      const updatedQuantity = existingData.quantity - item.quantity; // item.quantity is quantity sold
+
       await updateDoc(itemRef, {
-        quantity: item.quantity - 1,
+        quantity: updatedQuantity >= 0 ? updatedQuantity : 0,
       });
     }
+  }
 
-    alert('Sale complete!');
-    setCart([]);
-    setTotal(0);
-  };
+  alert('Sale complete!');
+  setCart([]);
+  setTotal(0);
+};
+
 
   const exportToPDF = () => {
     html2canvas(billRef.current).then(canvas => {
