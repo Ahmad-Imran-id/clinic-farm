@@ -96,7 +96,7 @@ const Billing = () => {
         </ul>
       </div>
 
-      <div ref={billRef}>
+      <div id="bill-print-area" ref={billRef}>
         <h3>Cart</h3>
         <ul>
           {cart.map(item => (
