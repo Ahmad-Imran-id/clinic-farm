@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../firebase-config';
 import Quagga from 'quagga'; // Barcode scanner
 import { QRCodeCanvas } from 'qrcode.react';
  // QR code
