@@ -110,6 +110,10 @@ const Billing = () => {
 
       <button onClick={handleCheckout}>Checkout</button>
       <button onClick={exportToPDF}>Download PDF</button>
+      <button onClick={handleCheckout}>Checkout</button>
+      <button onClick={exportToPDF}>Download PDF</button>
+      <button onClick={() => window.print()}>Print Bill</button>
+
     </div>
   );
 };
