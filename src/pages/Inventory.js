@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase-config';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc
+} from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 
 const Inventory = () => {
@@ -9,34 +16,52 @@ const Inventory = () => {
   const [bulkProducts, setBulkProducts] = useState([{ name: '', price: '', quantity: '' }]);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [editingItem, setEditingItem] = useState(null);
 
-  // Fetch inventory products
   useEffect(() => {
-    const fetchProducts = async () => {
-      const snapshot = await getDocs(collection(db, 'inventory'));
-      const productList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setProducts(productList);
-    };
     fetchProducts();
   }, []);
 
-  // Single item handlers
+  const fetchProducts = async () => {
+    const snapshot = await getDocs(collection(db, 'inventory'));
+    const productList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setProducts(productList);
+  };
+
   const handleInputChange = e => {
     setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
   };
 
-  const handleAddProduct = async () => {
+  const handleAddOrUpdateProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.quantity) return alert('Please fill all fields');
-    await addDoc(collection(db, 'inventory'), {
-      ...newProduct,
+    const productData = {
+      name: newProduct.name,
       price: parseFloat(newProduct.price),
       quantity: parseInt(newProduct.quantity),
-    });
-    alert('Product added');
+    };
+    if (editingItem) {
+      await updateDoc(doc(db, 'inventory', editingItem.id), productData);
+      alert('Product updated');
+    } else {
+      await addDoc(collection(db, 'inventory'), productData);
+      alert('Product added');
+    }
     setNewProduct({ name: '', price: '', quantity: '' });
+    setEditingItem(null);
+    fetchProducts();
   };
 
-  // Bulk input handlers
+  const handleEdit = item => {
+    setEditingItem(item);
+    setNewProduct({ name: item.name, price: item.price, quantity: item.quantity });
+  };
+
+  const handleDelete = async id => {
+    await deleteDoc(doc(db, 'inventory', id));
+    fetchProducts();
+    alert('Item deleted successfully!');
+  };
+
   const handleBulkChange = (index, e) => {
     const updated = [...bulkProducts];
     updated[index][e.target.name] = e.target.value;
@@ -59,9 +84,9 @@ const Inventory = () => {
     }
     alert('Bulk items added!');
     setBulkProducts([{ name: '', price: '', quantity: '' }]);
+    fetchProducts();
   };
 
-  // Export to Excel
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(products);
     const workbook = XLSX.utils.book_new();
@@ -69,7 +94,6 @@ const Inventory = () => {
     XLSX.writeFile(workbook, 'Inventory.xlsx');
   };
 
-  // Auto-suggestions
   const handleSearchChange = e => {
     const value = e.target.value;
     setSearchQuery(value);
@@ -109,13 +133,13 @@ const Inventory = () => {
         </ul>
       </div>
 
-      {/* Single Add Form */}
+      {/* Single Add/Edit Form */}
       <div>
-        <h3>Add Product</h3>
+        <h3>{editingItem ? 'Edit Product' : 'Add Product'}</h3>
         <input name="name" placeholder="Name" value={newProduct.name} onChange={handleInputChange} />
         <input name="price" placeholder="Price" value={newProduct.price} onChange={handleInputChange} />
         <input name="quantity" placeholder="Quantity" value={newProduct.quantity} onChange={handleInputChange} />
-        <button onClick={handleAddProduct}>Add</button>
+        <button onClick={handleAddOrUpdateProduct}>{editingItem ? 'Update' : 'Add'}</button>
       </div>
 
       {/* Bulk Add Form */}
@@ -133,6 +157,35 @@ const Inventory = () => {
       </div>
 
       <button onClick={exportToExcel}>Download Inventory Excel</button>
+
+      {/* Inventory Display Table */}
+      <div style={{ marginTop: '30px' }}>
+        <h3>Current Inventory</h3>
+        <button onClick={fetchProducts}>Refresh Inventory</button>
+        <table border="1" cellPadding="10" style={{ marginTop: '10px', width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Quantity</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map(item => (
+              <tr key={item.id}>
+                <td>{item.name}</td>
+                <td>${item.price}</td>
+                <td>{item.quantity}</td>
+                <td>
+                  <button onClick={() => handleEdit(item)}>Edit</button>
+                  <button onClick={() => handleDelete(item.id)} style={{ marginLeft: '10px' }}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
