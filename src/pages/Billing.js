@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import Quagga from 'quagga'; // Barcode scanner
-import QRCode from 'qrcode.react'; // QR code
+import { QRCodeCanvas } from 'qrcode.react';
+ // QR code
 import html2canvas from 'html2canvas'; // PDF export
 import { jsPDF } from 'jspdf'; // PDF
 import * as XLSX from 'xlsx'; // Excel
@@ -257,7 +258,7 @@ const Billing = () => {
 
         <h4>Total: ${total}</h4>
         <p>Tablets: ${totalTabs} | Syrups: ${totalSyrups} | Injections: ${totalInjections}</p>
-        <QRCode value={invoiceNumber} size={100} style={{ marginTop: '10px' }} />
+        <QRCodeCanvas value={invoiceNumber} size={100} style={{ marginTop: '10px' }} />
       </div>
 
       <div style={{ marginTop: '20px' }}>
