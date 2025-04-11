@@ -57,6 +57,7 @@ useEffect(() => {
   
   const handleCheckout = async () => {
     await addDoc(collection(db, 'sales'), {
+      invoiceNumber,
       products: cart,
       totalAmount: total,
       date: new Date().toISOString(),
