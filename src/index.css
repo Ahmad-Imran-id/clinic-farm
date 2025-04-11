@@ -30,3 +30,22 @@ code {
   }
 }
 
+.tab-nav {
+  display: flex;
+  gap: 1rem;
+  background-color: #f4f4f4;
+  padding: 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.tab-nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: bold;
+}
+
+.tab-nav a:hover {
+  color: #007bff;
+}
+
+
