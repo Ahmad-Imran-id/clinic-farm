@@ -4,6 +4,8 @@ import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore'
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import QRCode from "react-qr-code";
+
 
 const Billing = () => {
   const [products, setProducts] = useState([]);
@@ -120,6 +122,9 @@ useEffect(() => {
     ))}
   </ul>
   <h4>Total: ${total}</h4>
+    <div>
+    <QRCode value={invoiceNumber} />
+  </div>
 </div>
 
 
