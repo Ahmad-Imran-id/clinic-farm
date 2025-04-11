@@ -1,4 +1,11 @@
-// ...keep all your existing imports unchanged
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import Quagga from 'quagga'; // Barcode scanner
+import QRCode from 'qrcode.react'; // QR code
+import html2canvas from 'html2canvas'; // PDF export
+import { jsPDF } from 'jspdf'; // PDF
+import * as XLSX from 'xlsx'; // Excel
 
 const Billing = () => {
   const [products, setProducts] = useState([]);
@@ -11,6 +18,7 @@ const Billing = () => {
   const [totalInjections, setTotalInjections] = useState(0);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '' });
+
   const billRef = useRef();
   const barcodeRef = useRef();
 
@@ -100,6 +108,47 @@ const Billing = () => {
     updateTotals(updatedCart);
   };
 
+  const updateInventoryAfterSale = async (item) => {
+    const itemRef = doc(db, 'inventory', item.id);
+    const itemSnap = await getDoc(itemRef);
+    if (!itemSnap.exists()) return;
+
+    const data = itemSnap.data();
+    let updatedFields = {};
+    const category = (data.category || '').toLowerCase();
+    const quantitySold = item.quantity;
+
+    if (category.includes('tab') && data.tabletsPerStrip) {
+      const currentRemainingTabs = data.remainingTabs || 0;
+      let newRemainingTabs = currentRemainingTabs - quantitySold;
+
+      let stripsToDeduct = 0;
+      while (newRemainingTabs < 0 && (data.quantity - stripsToDeduct) > 0) {
+        stripsToDeduct++;
+        newRemainingTabs += data.tabletsPerStrip;
+      }
+
+      updatedFields.remainingTabs = Math.max(newRemainingTabs, 0);
+      updatedFields.quantity = Math.max((data.quantity || 0) - stripsToDeduct, 0);
+    } else if (category.includes('inj') && data.vialsPerPack) {
+      const currentRemainingVials = data.remainingVials || 0;
+      let newRemainingVials = currentRemainingVials - quantitySold;
+
+      let packsToDeduct = 0;
+      while (newRemainingVials < 0 && (data.quantity - packsToDeduct) > 0) {
+        packsToDeduct++;
+        newRemainingVials += data.vialsPerPack;
+      }
+
+      updatedFields.remainingVials = Math.max(newRemainingVials, 0);
+      updatedFields.quantity = Math.max((data.quantity || 0) - packsToDeduct, 0);
+    } else {
+      updatedFields.quantity = Math.max((data.quantity || 0) - quantitySold, 0);
+    }
+
+    await updateDoc(itemRef, updatedFields);
+  };
+
   const handleCheckout = async () => {
     const customerRef = await addDoc(collection(db, 'customers'), customerInfo);
 
@@ -115,15 +164,7 @@ const Billing = () => {
     });
 
     for (const item of cart) {
-      const itemRef = doc(db, 'inventory', item.id);
-      const itemSnap = await getDoc(itemRef);
-      if (itemSnap.exists()) {
-        const existingData = itemSnap.data();
-        const updatedQuantity = existingData.quantity - item.quantity;
-        await updateDoc(itemRef, {
-          quantity: updatedQuantity >= 0 ? updatedQuantity : 0,
-        });
-      }
+      await updateInventoryAfterSale(item);
     }
 
     alert('Sale complete!');
