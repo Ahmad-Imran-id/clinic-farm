@@ -11,7 +11,7 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <nav>
+        <nav className="tab-nav">
           <Link to="/login">Login</Link> | <Link to="/signup">Sign Up</Link> | <Link to="/dashboard">Dashboard</Link> | <Link to="/inventory">Inventory</Link> | <Link to="/billing">Billing</Link>
         </nav>
         <Routes>
