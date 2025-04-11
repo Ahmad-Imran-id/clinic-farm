@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase-config';
-import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import QRCode from "react-qr-code";
-import { getDoc } from 'firebase/firestore';
-
-
+import QRCode from 'react-qr-code';
+import Quagga from 'quagga';  // Barcode scanning library
 
 const Billing = () => {
   const [products, setProducts] = useState([]);
@@ -15,7 +13,10 @@ const Billing = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [total, setTotal] = useState(0);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', address: '' });
   const billRef = useRef();
+  const barcodeRef = useRef();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -24,7 +25,41 @@ const Billing = () => {
       setProducts(productList);
     };
     fetchProducts();
-  }, []);
+
+    // Initialize barcode scanner
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: barcodeRef.current, // video element
+        constraints: {
+          facingMode: "environment",
+        }
+      },
+      decoder: {
+        readers: ["ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader"]
+      }
+    }, (err) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      Quagga.start();
+    });
+
+    Quagga.onDetected((data) => {
+      const scannedBarcode = data.codeResult.code;
+      const product = products.find(p => p.barcode === scannedBarcode); // Match product by barcode
+      if (product) {
+        addToCart(product);
+      }
+    });
+
+    // Generate Invoice Number
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const randomPart = Math.floor(1000 + Math.random() * 9000);
+    setInvoiceNumber(`INV-${datePart}-${randomPart}`);
+  }, [products]);
 
   const updateTotal = (updatedCart) => {
     const total = updatedCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -36,7 +71,9 @@ const Billing = () => {
     let updatedCart;
     if (existing) {
       updatedCart = cart.map(item =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        item.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
       );
     } else {
       updatedCart = [...cart, { ...product, quantity: 1 }];
@@ -47,45 +84,52 @@ const Billing = () => {
     setSuggestions([]);
   };
 
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-
-useEffect(() => {
-  const generateInvoiceNumber = () => {
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randomPart = Math.floor(1000 + Math.random() * 9000);
-    return `INV-${datePart}-${randomPart}`;
+  const handleQuantityChange = (id, newQty) => {
+    const updatedCart = cart.map(item =>
+      item.id === id ? { ...item, quantity: parseInt(newQty) || 0 } : item
+    );
+    setCart(updatedCart);
+    updateTotal(updatedCart);
   };
-  setInvoiceNumber(generateInvoiceNumber());
-}, []);
 
+  const handleRemoveItem = (id) => {
+    const updatedCart = cart.filter(item => item.id !== id);
+    setCart(updatedCart);
+    updateTotal(updatedCart);
+  };
 
-const handleCheckout = async () => {
-  await addDoc(collection(db, 'sales'), {
-    invoiceNumber,
-    products: cart,
-    totalAmount: total,
-    date: new Date().toISOString(),
-  });
+  const handleCheckout = async () => {
+    // Save customer info in Firebase
+    const customerRef = await addDoc(collection(db, 'customers'), customerInfo);
 
-  for (const item of cart) {
-    const itemRef = doc(db, 'inventory', item.id);
-    const itemSnap = await getDoc(itemRef);
+    // Save the sale with customer info linked
+    await addDoc(collection(db, 'sales'), {
+      invoiceNumber,
+      products: cart,
+      totalAmount: total,
+      date: new Date().toISOString(),
+      customerId: customerRef.id,  // Link to customer
+    });
 
-    if (itemSnap.exists()) {
-      const existingData = itemSnap.data();
-      const updatedQuantity = existingData.quantity - item.quantity; // item.quantity is quantity sold
+    // Update inventory
+    for (const item of cart) {
+      const itemRef = doc(db, 'inventory', item.id);
+      const itemSnap = await getDoc(itemRef);
 
-      await updateDoc(itemRef, {
-        quantity: updatedQuantity >= 0 ? updatedQuantity : 0,
-      });
+      if (itemSnap.exists()) {
+        const existingData = itemSnap.data();
+        const updatedQuantity = existingData.quantity - item.quantity;
+        await updateDoc(itemRef, {
+          quantity: updatedQuantity >= 0 ? updatedQuantity : 0,
+        });
+      }
     }
-  }
 
-  alert('Sale complete!');
-  setCart([]);
-  setTotal(0);
-};
-
+    alert('Sale complete!');
+    setCart([]);
+    setTotal(0);
+    setCustomerInfo({ name: '', phone: '', address: '' }); // Clear customer info
+  };
 
   const exportToPDF = () => {
     html2canvas(billRef.current).then(canvas => {
@@ -96,54 +140,119 @@ const handleCheckout = async () => {
     });
   };
 
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(cart.map(({ id, ...rest }) => rest));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Bill');
+    XLSX.writeFile(workbook, `${invoiceNumber}.xlsx`);
+  };
+
   const handleSearchChange = e => {
     const value = e.target.value;
     setSearchQuery(value);
-    if (value) {
-      const filtered = products.filter(p => p.name.toLowerCase().includes(value.toLowerCase()));
-      setSuggestions(filtered);
-    } else {
-      setSuggestions([]);
-    }
+    setSuggestions(value
+      ? products.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+      : []);
+  };
+
+  const handleCustomerInfoChange = e => {
+    const { name, value } = e.target;
+    setCustomerInfo(prevState => ({
+      ...prevState,
+      [name]: value,
+    }));
   };
 
   return (
     <div style={{ padding: '20px' }}>
       <h2>Billing</h2>
-      <div>
-        <input value={searchQuery} onChange={handleSearchChange} placeholder="Search product..." />
-        <ul>
-          {suggestions.map(p => (
-            <li key={p.id} onClick={() => addToCart(p)} style={{ cursor: 'pointer' }}>
-              {p.name}
-            </li>
-          ))}
-        </ul>
+      <input
+        value={searchQuery}
+        onChange={handleSearchChange}
+        placeholder="Search product..."
+      />
+      <ul>
+        {suggestions.map(p => (
+          <li key={p.id} onClick={() => addToCart(p)} style={{ cursor: 'pointer' }}>
+            {p.name}
+          </li>
+        ))}
+      </ul>
+
+      <div ref={billRef} style={{ marginTop: '20px' }}>
+        <h3>Invoice: {invoiceNumber}</h3>
+        <table style={{ width: '100%', marginTop: '10px' }} border="1" cellPadding="5">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Total</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cart.map(item => (
+              <tr key={item.id}>
+                <td>{item.name}</td>
+                <td>${item.price}</td>
+                <td>
+                  <input
+                    type="number"
+                    value={item.quantity}
+                    min="1"
+                    onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                    style={{ width: '60px' }}
+                  />
+                </td>
+                <td>${item.price * item.quantity}</td>
+                <td>
+                  <button onClick={() => handleRemoveItem(item.id)}>X</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h4>Total: ${total}</h4>
+        <QRCode value={invoiceNumber} size={100} style={{ marginTop: '10px' }} />
       </div>
 
-      <div id="bill-print-area" ref={billRef}>
-  <h3>Invoice Number: {invoiceNumber}</h3>
-  <h3>Cart</h3>
-  <ul>
-    {cart.map(item => (
-      <li key={item.id}>
-        {item.name} - {item.quantity} x ${item.price} = ${item.quantity * item.price}
-      </li>
-    ))}
-  </ul>
-  <h4>Total: ${total}</h4>
-    <div>
-    <QRCode value={invoiceNumber} />
-  </div>
-</div>
+      <div style={{ marginTop: '20px' }}>
+        <h3>Customer Info</h3>
+        <input
+          type="text"
+          name="name"
+          placeholder="Customer Name"
+          value={customerInfo.name}
+          onChange={handleCustomerInfoChange}
+        />
+        <input
+          type="text"
+          name="phone"
+          placeholder="Customer Phone"
+          value={customerInfo.phone}
+          onChange={handleCustomerInfoChange}
+        />
+        <input
+          type="text"
+          name="address"
+          placeholder="Customer Address"
+          value={customerInfo.address}
+          onChange={handleCustomerInfoChange}
+        />
+      </div>
 
+      <div style={{ marginTop: '20px' }}>
+        <button onClick={handleCheckout}>Checkout</button>
+        <button onClick={exportToPDF}>Download PDF</button>
+        <button onClick={exportToExcel}>Download Excel</button>
+        <button onClick={() => window.print()}>Print Bill</button>
+      </div>
 
-      <button onClick={handleCheckout}>Checkout</button>
-      <button onClick={exportToPDF}>Download PDF</button>
-      <button onClick={handleCheckout}>Checkout</button>
-      <button onClick={exportToPDF}>Download PDF</button>
-      <button onClick={() => window.print()}>Print Bill</button>
-
+      <div ref={barcodeRef} style={{ marginTop: '20px' }}>
+        {/* Barcode scanner will show live feed here */}
+      </div>
     </div>
   );
 };
