@@ -9,7 +9,8 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
+
 
 const Inventory = () => {
   const [products, setProducts] = useState([]);
@@ -180,7 +181,7 @@ const Inventory = () => {
                 <td>${item.price}</td>
                 <td>{item.quantity}</td>
                 <td>
-                  <QRCode value={`Name: ${item.name}\nPrice: ${item.price}\nQty: ${item.quantity}`} size={64} />
+                  <QRCodeCanvas value={`Name: ${item.name}\nPrice: ${item.price}\nQty: ${item.quantity}`} size={64} />
                 </td>
                 <td>
                   <button onClick={() => handleEdit(item)}>Edit</button>
