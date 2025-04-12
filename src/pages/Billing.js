@@ -3,7 +3,6 @@ import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/fi
 import { db } from '../firebase-config';
 import Quagga from 'quagga'; // Barcode scanner
 import { QRCodeCanvas } from 'qrcode.react';
- // QR code
 import html2canvas from 'html2canvas'; // PDF export
 import { jsPDF } from 'jspdf'; // PDF
 import * as XLSX from 'xlsx'; // Excel
@@ -86,7 +85,7 @@ const Billing = () => {
         item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       );
     } else {
-      updatedCart = [...cart, { ...product, quantity: 1 }];
+      updatedCart = [...cart, { ...product, quantity: 1, unitType: 'pack' }];
     }
 
     setCart(updatedCart);
@@ -101,6 +100,13 @@ const Billing = () => {
     );
     setCart(updatedCart);
     updateTotals(updatedCart);
+  };
+
+  const handleUnitTypeChange = (id, unitType) => {
+    const updatedCart = cart.map(item =>
+      item.id === id ? { ...item, unitType } : item
+    );
+    setCart(updatedCart);
   };
 
   const handleRemoveItem = (id) => {
@@ -119,30 +125,28 @@ const Billing = () => {
     const category = (data.category || '').toLowerCase();
     const quantitySold = item.quantity;
 
-    if (category.includes('tab') && data.tabletsPerStrip) {
-      const currentRemainingTabs = data.remainingTabs || 0;
-      let newRemainingTabs = currentRemainingTabs - quantitySold;
-
-      let stripsToDeduct = 0;
-      while (newRemainingTabs < 0 && (data.quantity - stripsToDeduct) > 0) {
-        stripsToDeduct++;
-        newRemainingTabs += data.tabletsPerStrip;
+    if (item.unitType === 'unit') {
+      if (category.includes('tab') && data.tabletsPerStrip) {
+        const currentRemainingTabs = data.remainingTabs || 0;
+        let newRemainingTabs = currentRemainingTabs - quantitySold;
+        let stripsToDeduct = 0;
+        while (newRemainingTabs < 0 && (data.quantity - stripsToDeduct) > 0) {
+          stripsToDeduct++;
+          newRemainingTabs += data.tabletsPerStrip;
+        }
+        updatedFields.remainingTabs = Math.max(newRemainingTabs, 0);
+        updatedFields.quantity = Math.max((data.quantity || 0) - stripsToDeduct, 0);
+      } else if (category.includes('inj') && data.vialsPerPack) {
+        const currentRemainingVials = data.remainingVials || 0;
+        let newRemainingVials = currentRemainingVials - quantitySold;
+        let packsToDeduct = 0;
+        while (newRemainingVials < 0 && (data.quantity - packsToDeduct) > 0) {
+          packsToDeduct++;
+          newRemainingVials += data.vialsPerPack;
+        }
+        updatedFields.remainingVials = Math.max(newRemainingVials, 0);
+        updatedFields.quantity = Math.max((data.quantity || 0) - packsToDeduct, 0);
       }
-
-      updatedFields.remainingTabs = Math.max(newRemainingTabs, 0);
-      updatedFields.quantity = Math.max((data.quantity || 0) - stripsToDeduct, 0);
-    } else if (category.includes('inj') && data.vialsPerPack) {
-      const currentRemainingVials = data.remainingVials || 0;
-      let newRemainingVials = currentRemainingVials - quantitySold;
-
-      let packsToDeduct = 0;
-      while (newRemainingVials < 0 && (data.quantity - packsToDeduct) > 0) {
-        packsToDeduct++;
-        newRemainingVials += data.vialsPerPack;
-      }
-
-      updatedFields.remainingVials = Math.max(newRemainingVials, 0);
-      updatedFields.quantity = Math.max((data.quantity || 0) - packsToDeduct, 0);
     } else {
       updatedFields.quantity = Math.max((data.quantity || 0) - quantitySold, 0);
     }
@@ -230,6 +234,7 @@ const Billing = () => {
               <th>Category</th>
               <th>Price</th>
               <th>Qty</th>
+              <th>Unit Type</th>
               <th>Total</th>
               <th>Remove</th>
             </tr>
@@ -248,6 +253,12 @@ const Billing = () => {
                     onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                     style={{ width: '60px' }}
                   />
+                </td>
+                <td>
+                  <select value={item.unitType} onChange={e => handleUnitTypeChange(item.id, e.target.value)}>
+                    <option value="pack">Pack</option>
+                    <option value="unit">Unit</option>
+                  </select>
                 </td>
                 <td>${item.price * item.quantity}</td>
                 <td><button onClick={() => handleRemoveItem(item.id)}>X</button></td>
