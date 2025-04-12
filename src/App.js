@@ -4,9 +4,12 @@ import Login from "./Login";
 import Signup from "./Signup";
 import Dashboard from "./Dashboard";
 import PatientManagement from './components/PatientManagement';
-import Inventory from './components/Inventory/InventoryMain';  // ✅ updated path
-import Billing from './pages/Billing/BillingMain';             // ✅ updated path
+import Inventory from './components/Inventory/InventoryMain';
+import Billing from './pages/Billing/BillingMain';
 import Reports from './Reports';
+import AdminStaffDashboard from './components/AdminStaffDashboard'; // ✅ Add this when created
+import ProtectedRoute from './components/ProtectedRoute'; // ✅ custom wrapper
+import Unauthorized from './pages/Unauthorized'; // ✅ optional page for forbidden access
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
@@ -21,13 +24,48 @@ function App() {
           <Link to="/billing">Billing</Link> |
           <Link to="/reports">Reports</Link>
         </nav>
+
         <Routes>
+
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/inventory" element={<Inventory />} />  {/* ✅ InventoryMain.js */}
-          <Route path="/billing" element={<Billing />} />      {/* ✅ BillingMain.js */}
-          <Route path="/reports" element={<Reports />} />
+
+          {/* Unauthorized Fallback */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
+
+          {/* Admin-only routes */}
+          <Route path="/admin-staff-dashboard" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminStaffDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Shared routes for Admin & Staff */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/inventory" element={
+            <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <Inventory />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/billing" element={
+            <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <Billing />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/reports" element={
+            <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <Reports />
+            </ProtectedRoute>
+          } />
+
         </Routes>
       </div>
     </Router>
