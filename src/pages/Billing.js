@@ -154,24 +154,62 @@ const Billing = () => {
     await updateDoc(itemRef, updatedFields);
   };
 
-  const handleCheckout = async () => {
+ const handleCheckout = async () => {
+  try {
+    // Add customer to 'customers' collection
     const customerRef = await addDoc(collection(db, 'customers'), customerInfo);
 
-    await addDoc(collection(db, 'sales'), {
+    const saleDate = new Date();
+    const saleTimestamp = saleDate.toISOString();
+    const monthKey = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`; // e.g., "2025-04"
+
+    // Record full sale to 'sales' collection
+    const saleData = {
       invoiceNumber,
       products: cart,
       totalAmount: total,
       totalTabs,
       totalSyrups,
       totalInjections,
-      date: new Date().toISOString(),
+      date: saleTimestamp,
       customerId: customerRef.id,
-    });
+      customerName: customerInfo.name || '',
+    };
 
+    await addDoc(collection(db, 'sales'), saleData);
+
+    // Update inventory
     for (const item of cart) {
       await updateInventoryAfterSale(item);
     }
 
+    // === NEW: Add to Monthly Report ===
+    const monthlyReportRef = doc(db, 'monthlyReports', monthKey);
+    const monthlySnapshot = await getDoc(monthlyReportRef);
+
+    if (monthlySnapshot.exists()) {
+      // If a report already exists for this month, update its totals
+      await updateDoc(monthlyReportRef, {
+        totalSales: increment(total),
+        totalTabs: increment(totalTabs),
+        totalSyrups: increment(totalSyrups),
+        totalInjections: increment(totalInjections),
+        numberOfSales: increment(1),
+      });
+    } else {
+      // If no report exists yet, create one
+      await setDoc(monthlyReportRef, {
+        totalSales: total,
+        totalTabs: totalTabs,
+        totalSyrups: totalSyrups,
+        totalInjections: totalInjections,
+        numberOfSales: 1,
+        month: monthKey,
+        createdAt: saleTimestamp,
+      });
+    }
+
+    // Reset billing states
     alert('Sale complete!');
     setCart([]);
     setTotal(0);
@@ -179,7 +217,13 @@ const Billing = () => {
     setTotalSyrups(0);
     setTotalInjections(0);
     setCustomerInfo({ name: '', phone: '', address: '' });
-  };
+
+  } catch (error) {
+    console.error("Checkout failed:", error);
+    alert("Something went wrong during checkout. Please try again.");
+  }
+};
+
 
   const exportToPDF = () => {
     html2canvas(billRef.current).then(canvas => {
