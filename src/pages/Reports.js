@@ -1,101 +1,66 @@
-// src/pages/Reports.js
+// reports.js
+import { db } from "../firebase-config";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  Timestamp,
+} from "firebase/firestore";
 
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase-config';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-const Reports = () => {
-  const [dailySales, setDailySales] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-
-  useEffect(() => {
-    fetchSalesForDate(selectedDate);
-  }, [selectedDate]);
-
-  const fetchSalesForDate = async (dateStr) => {
-    const start = new Date(dateStr);
-    const end = new Date(dateStr);
-    end.setHours(23, 59, 59, 999);
-
-    const salesQuery = query(
-      collection(db, 'sales'),
-      where('date', ">=", start.toISOString()),
-      where('date', "<=", end.toISOString())
-    );
-
-    const snapshot = await getDocs(salesQuery);
-    const salesData = snapshot.docs.map(doc => doc.data());
-    setDailySales(salesData);
+// Utility function to get start and end of month
+export const getMonthDateRange = (year, month) => {
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0, 23, 59, 59);
+  return {
+    startTimestamp: Timestamp.fromDate(start),
+    endTimestamp: Timestamp.fromDate(end),
   };
-
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(dailySales);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Daily Sales');
-    XLSX.writeFile(workbook, `Sales_Report_${selectedDate}.xlsx`);
-  };
-
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.text(`Sales Report - ${selectedDate}`, 10, 10);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Invoice', 'Total', 'Tabs', 'Syrups', 'Injections']],
-      body: dailySales.map(sale => [
-        sale.invoiceNumber,
-        `$${sale.totalAmount}`,
-        `$${sale.totalTabs}`,
-        `$${sale.totalSyrups}`,
-        `$${sale.totalInjections}`
-      ])
-    });
-    doc.save(`Sales_Report_${selectedDate}.pdf`);
-  };
-
-  return (
-    <div style={{ padding: '20px' }}>
-      <h2>Sales Reports</h2>
-      <label>
-        Select Date: 
-        <input 
-          type="date" 
-          value={selectedDate} 
-          onChange={(e) => setSelectedDate(e.target.value)} 
-        />
-      </label>
-
-      <table border="1" cellPadding="5" style={{ marginTop: '20px', width: '100%' }}>
-        <thead>
-          <tr>
-            <th>Invoice</th>
-            <th>Total</th>
-            <th>Tabs</th>
-            <th>Syrups</th>
-            <th>Injections</th>
-          </tr>
-        </thead>
-        <tbody>
-          {dailySales.map((sale, index) => (
-            <tr key={index}>
-              <td>{sale.invoiceNumber}</td>
-              <td>${sale.totalAmount}</td>
-              <td>${sale.totalTabs}</td>
-              <td>${sale.totalSyrups}</td>
-              <td>${sale.totalInjections}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div style={{ marginTop: '20px' }}>
-        <button onClick={exportToExcel}>Download Excel</button>
-        <button onClick={exportToPDF}>Download PDF</button>
-      </div>
-    </div>
-  );
 };
 
-export default Reports;
+// Generate monthly sales report for given year and month (0-indexed month)
+export const generateMonthlyReport = async (year, month) => {
+  const { startTimestamp, endTimestamp } = getMonthDateRange(year, month);
+
+  const salesRef = collection(db, "sales");
+  const q = query(
+    salesRef,
+    where("timestamp", ">=", startTimestamp),
+    where("timestamp", "<=", endTimestamp)
+  );
+
+  const querySnapshot = await getDocs(q);
+  const monthlySales = [];
+  let totalRevenue = 0;
+  let categoryTotals = {};
+
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    monthlySales.push(data);
+    totalRevenue += data.total || 0;
+    (data.items || []).forEach((item) => {
+      const category = item.category || "Uncategorized";
+      categoryTotals[category] = (categoryTotals[category] || 0) + item.total;
+    });
+  });
+
+  const reportData = {
+    year,
+    month,
+    totalRevenue,
+    totalSales: monthlySales.length,
+    categoryTotals,
+    createdAt: Timestamp.now(),
+  };
+
+  await addDoc(collection(db, "monthlyReports"), reportData);
+  return reportData;
+};
+
+// Optionally, fetch saved reports
+export const getMonthlyReports = async () => {
+  const reportsRef = collection(db, "monthlyReports");
+  const snapshot = await getDocs(reportsRef);
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
