@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase-config';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { saveAs } from 'file-saver';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -18,12 +18,18 @@ const Reports = ({ currentUser }) => {
 
   useEffect(() => {
     const fetchSales = async () => {
-      const salesSnap = await getDocs(collection(db, 'sales'));
+      if (!currentUser) return; // Ensure user is logged in
+
+      const salesRef = collection(db, 'sales');
+      const q = query(salesRef, where('userId', '==', currentUser.uid)); // Filter sales by current user's UID
+
+      const salesSnap = await getDocs(q);
       const salesData = salesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setSales(salesData);
     };
+
     fetchSales();
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     let filtered = sales;
