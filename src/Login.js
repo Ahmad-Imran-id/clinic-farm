@@ -10,7 +10,13 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      // Optional: store UID locally to use in app (temporary/local)
+      localStorage.setItem("userUID", uid);
+
+      // Navigate after successful login
       navigate("/dashboard");
     } catch (err) {
       alert("Login Failed: " + err.message);
@@ -18,11 +24,21 @@ function Login() {
   };
 
   return (
-    <div>
+    <div className="container mt-5">
       <h2>Login</h2>
-      <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={handleLogin}>Login</button>
+      <input
+        type="email"
+        placeholder="Email"
+        className="form-control my-2"
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        className="form-control my-2"
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button className="btn btn-primary" onClick={handleLogin}>Login</button>
     </div>
   );
 }
