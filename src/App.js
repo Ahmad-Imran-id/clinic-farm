@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./Login";
 import Signup from "./Signup";
@@ -9,10 +9,20 @@ import Billing from './components/Billing/BillingMain';
 import Reports from './pages/Reports';
 import AdminStaffDashboard from './components/AdminStaffDashboard'; // ✅ Add this when created
 import ProtectedRoute from './components/ProtectedRoute'; // ✅ custom wrapper
-import Unauthorized from './pages/Unauthorized'; // ✅ optional page for forbidden access
+// ✅ optional page for forbidden access
+import { useAuth } from './components/hooks/useAuth'; // Import useAuth hook for authentication state
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
+  const { currentUser, role } = useAuth(); // Using useAuth to get current user and role
+
+  useEffect(() => {
+    if (!currentUser) {
+      // If the user is not logged in, redirect them to login
+      window.location.href = "/login";
+    }
+  }, [currentUser]);
+
   return (
     <Router>
       <div className="App">
