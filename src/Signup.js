@@ -10,7 +10,12 @@ function Signup() {
 
   const handleSignup = async () => {
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Store UID in localStorage for user-specific Firestore access
+      localStorage.setItem("uid", user.uid);
+
       navigate("/dashboard");
     } catch (err) {
       alert("Signup Failed: " + err.message);
@@ -20,8 +25,16 @@ function Signup() {
   return (
     <div>
       <h2>Sign Up</h2>
-      <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
+      <input
+        type="email"
+        placeholder="Email"
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        onChange={(e) => setPassword(e.target.value)}
+      />
       <button onClick={handleSignup}>Create Account</button>
     </div>
   );
