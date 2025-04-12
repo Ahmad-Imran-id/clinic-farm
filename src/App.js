@@ -5,7 +5,7 @@ import Signup from "./Signup";
 import Dashboard from "./Dashboard";
 import PatientManagement from './components/PatientManagement';
 import Inventory from './components/Inventory/InventoryMain';
-import Billing from './pages/Billing/BillingMain';
+import Billing from './components/Billing/BillingMain';
 import Reports from './Reports';
 import AdminStaffDashboard from './components/AdminStaffDashboard'; // ✅ Add this when created
 import ProtectedRoute from './components/ProtectedRoute'; // ✅ custom wrapper
