@@ -7,6 +7,7 @@ import PatientManagement from './components/PatientManagement';
 import Inventory from "./pages/Inventory";
 import Billing from './pages/Billing'; // Import Billing page
 import Reports from './Reports'; // Import the new file
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 
 function App() {
