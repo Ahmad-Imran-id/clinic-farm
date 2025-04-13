@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
-import { collection, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
 import { useAuth } from '../../hooks/useAuth';
- // Adjust path based on actual location
 import InventoryForm from './InventoryForm';
 import BulkAddForm from './BulkAddForm';
 import InventoryTable from './InventoryTable';
@@ -16,6 +21,14 @@ const Inventory = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [editingItem, setEditingItem] = useState(null);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    quantity: '',
+    unitsPerPack: '',
+    unitType: '',
+    category: 'Tablet',
+  });
 
   const fetchProducts = async () => {
     if (!user) return;
@@ -35,6 +48,39 @@ const Inventory = () => {
     XLSX.writeFile(workbook, 'Inventory.xlsx');
   };
 
+  const handleAddOrUpdateProduct = async () => {
+    if (!newProduct.name) return;
+
+    const productRef = doc(db, `users/${user.uid}/inventory`, newProduct.name);
+    const productData = {
+      ...newProduct,
+      price: parseFloat(newProduct.price),
+      quantity: parseInt(newProduct.quantity),
+      unitsPerPack: parseInt(newProduct.unitsPerPack),
+    };
+
+    try {
+      if (editingItem) {
+        await updateDoc(productRef, productData);
+      } else {
+        await setDoc(productRef, productData);
+      }
+
+      await fetchProducts();
+      setNewProduct({
+        name: '',
+        price: '',
+        quantity: '',
+        unitsPerPack: '',
+        unitType: '',
+        category: 'Tablet',
+      });
+      setEditingItem(null);
+    } catch (error) {
+      console.error("Error saving product:", error);
+    }
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -44,6 +90,7 @@ const Inventory = () => {
   return (
     <div style={{ padding: '20px' }}>
       <h2>Inventory Management</h2>
+
       <SearchBar 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -51,18 +98,25 @@ const Inventory = () => {
         setSuggestions={setSuggestions}
         products={products}
       />
+
       <InventoryForm 
-        user={user} 
-        fetchProducts={fetchProducts} 
-        editingItem={editingItem} 
-        setEditingItem={setEditingItem} 
+        newProduct={newProduct}
+        setNewProduct={setNewProduct}
+        handleAddOrUpdateProduct={handleAddOrUpdateProduct}
+        editingItem={editingItem}
       />
+
       <BulkAddForm user={user} fetchProducts={fetchProducts} />
+
       <button onClick={exportToExcel}>Download Inventory Excel</button>
+
       <InventoryTable 
         products={filteredProducts} 
         fetchProducts={fetchProducts} 
-        setEditingItem={setEditingItem} 
+        setEditingItem={(item) => {
+          setEditingItem(item);
+          setNewProduct(item);
+        }}
         selectedCategory={selectedCategory} 
         setSelectedCategory={setSelectedCategory} 
       />
