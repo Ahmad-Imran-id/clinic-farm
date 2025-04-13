@@ -10,6 +10,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 function Signup() {
   const [name, setName] = useState("");
