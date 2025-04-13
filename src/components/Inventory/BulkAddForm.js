@@ -5,12 +5,15 @@ const BulkAddForm = ({
   setBulkProducts = () => {},
   handleBulkSubmit = () => {},
 }) => {
+  
+  // Handle changes in the individual product fields
   const handleChange = (index, field, value) => {
     const updated = [...bulkProducts];
     updated[index][field] = value;
-    setBulkProducts(updated);
+    setBulkProducts(updated); // Update the bulkProducts state
   };
 
+  // Add a new row for another product
   const handleAddRow = () => {
     setBulkProducts([
       ...bulkProducts,
@@ -25,9 +28,22 @@ const BulkAddForm = ({
     ]);
   };
 
+  // Handle form submission for bulk products
+  const handleSubmit = () => {
+    console.log('Submitting bulk products:', bulkProducts);
+
+    // Call the passed-in submit handler
+    if (bulkProducts.length > 0) {
+      handleBulkSubmit(bulkProducts);
+    } else {
+      console.error('No products to submit!');
+    }
+  };
+
   return (
     <div>
       <h3>Bulk Add Products</h3>
+
       {Array.isArray(bulkProducts) &&
         bulkProducts.map((item, index) => (
           <div key={index} style={{ marginBottom: '10px' }}>
@@ -71,7 +87,7 @@ const BulkAddForm = ({
         ))}
 
       <button onClick={handleAddRow}>Add More</button>
-      <button onClick={handleBulkSubmit}>Submit Bulk Products</button>
+      <button onClick={handleSubmit}>Submit Bulk Products</button>
     </div>
   );
 };
