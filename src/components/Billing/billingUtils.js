@@ -1,4 +1,6 @@
 // billingUtils.js
+import jsPDF from 'jspdf';
+
 
 // Function to fetch sales data (replace with actual data-fetching logic)
 export const fetchSalesData = async () => {
