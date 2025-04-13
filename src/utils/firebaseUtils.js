@@ -1,6 +1,6 @@
 import { db } from '../firebase-config';
 import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
-import { getCurrentUserUid } from '../../utils/authUtils';
+import { getCurrentUserUid } from './authUtils';
 
 
 export const fetchProductByBarcode = async (barcode) => {
