@@ -10,7 +10,7 @@ import Reports from './pages/Reports';
 import AdminStaffDashboard from './components/AdminStaffDashboard'; // ✅ Add this when created
 import ProtectedRoute from './components/ProtectedRoute'; // ✅ custom wrapper
 // ✅ optional page for forbidden access
-import { useAuth } from './components/hooks/useAuth'; // Import useAuth hook for authentication state
+import { useAuth } from './hooks/useAuth'; // Import useAuth hook for authentication state
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
