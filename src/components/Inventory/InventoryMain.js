@@ -5,7 +5,8 @@ import {
   getDocs,
   doc,
   setDoc,
-  updateDoc
+  updateDoc,
+  addDoc,
 } from 'firebase/firestore';
 import { useAuth } from '../../hooks/useAuth';
 import InventoryForm from './InventoryForm';
@@ -29,6 +30,7 @@ const Inventory = () => {
     unitType: '',
     category: 'Tablet',
   });
+  const [bulkProducts, setBulkProducts] = useState([]);
 
   const fetchProducts = async () => {
     if (!user) return;
@@ -81,6 +83,28 @@ const Inventory = () => {
     }
   };
 
+  const handleBulkSubmit = async () => {
+    if (!user || bulkProducts.length === 0) return;
+
+    const inventoryRef = collection(db, `users/${user.uid}/inventory`);
+    const batch = bulkProducts.map(product => ({
+      ...product,
+      price: parseFloat(product.price),
+      quantity: parseInt(product.quantity),
+      unitsPerPack: parseInt(product.unitsPerPack),
+    }));
+
+    try {
+      for (const product of batch) {
+        await addDoc(inventoryRef, product);
+      }
+      setBulkProducts([]);
+      await fetchProducts();
+    } catch (error) {
+      console.error("Error during bulk submit:", error);
+    }
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -106,7 +130,11 @@ const Inventory = () => {
         editingItem={editingItem}
       />
 
-      <BulkAddForm user={user} fetchProducts={fetchProducts} />
+      <BulkAddForm 
+        bulkProducts={bulkProducts}
+        setBulkProducts={setBulkProducts}
+        handleBulkSubmit={handleBulkSubmit}
+      />
 
       <button onClick={exportToExcel}>Download Inventory Excel</button>
 
