@@ -28,16 +28,23 @@ function Signup() {
       let associatedAdminUID = user.uid;
       if (role === "staff") {
         // Lookup admin by email
-        const adminQuery = await getDoc(doc(db, "users", adminEmail));
-        if (!adminQuery.exists()) {
-          alert("Admin account not found.");
-          return;
-        }
-        associatedAdminUID = adminQuery.data().uid;
+       const adminQuery = query(
+  collection(db, "users"),
+  where("email", "==", adminEmail),
+  where("role", "==", "admin")
+);
+const querySnapshot = await getDocs(adminQuery);
+
+if (querySnapshot.empty) {
+  alert("Admin account not found.");
+  return;
+}
+const adminDoc = querySnapshot.docs[0];
+associatedAdminUID = adminDoc.data().uid;
       }
 
       // Save user info
-      await setDoc(doc(db, "users", email), {
+      await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
         email,
