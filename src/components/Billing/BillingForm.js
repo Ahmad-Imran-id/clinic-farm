@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { fetchProductByBarcode, fetchProductSuggestions } from '../../utils/firebaseUtils';
-import { getCurrentUserUid } from '../../firebase/firebase-config';
+import { getCurrentUserUid } from '../../firebase-config';
 
 const BillingForm = ({ onAddToCart }) => {
   const [barcode, setBarcode] = useState('');
