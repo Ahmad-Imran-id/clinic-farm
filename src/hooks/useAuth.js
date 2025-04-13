@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 export const useAuth = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -20,10 +21,11 @@ export const useAuth = () => {
         setCurrentUser(null);
         setRole(null);
       }
+      setLoading(false); // Stop loading after data is fetched
     });
 
     return () => unsubscribe();
   }, []);
 
-  return { currentUser, role };
+  return { currentUser, role, loading }; // Return loading state
 };
