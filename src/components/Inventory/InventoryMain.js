@@ -5,8 +5,7 @@ import {
   getDocs,
   doc,
   setDoc,
-  updateDoc,
-  addDoc,
+  updateDoc
 } from 'firebase/firestore';
 import { useAuth } from '../../hooks/useAuth';
 import InventoryForm from './InventoryForm';
@@ -17,7 +16,7 @@ import * as XLSX from 'xlsx';
 
 const Inventory = () => {
   const { user } = useAuth();
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]); // Ensure it's an array
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -30,13 +29,12 @@ const Inventory = () => {
     unitType: '',
     category: 'Tablet',
   });
-  const [bulkProducts, setBulkProducts] = useState([]);
 
   const fetchProducts = async () => {
     if (!user) return;
     const snapshot = await getDocs(collection(db, `users/${user.uid}/inventory`));
     const productList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setProducts(productList);
+    setProducts(productList); // Always set as an array
   };
 
   useEffect(() => {
@@ -83,33 +81,14 @@ const Inventory = () => {
     }
   };
 
-  const handleBulkSubmit = async () => {
-    if (!user || bulkProducts.length === 0) return;
-
-    const inventoryRef = collection(db, `users/${user.uid}/inventory`);
-    const batch = bulkProducts.map(product => ({
-      ...product,
-      price: parseFloat(product.price),
-      quantity: parseInt(product.quantity),
-      unitsPerPack: parseInt(product.unitsPerPack),
-    }));
-
-    try {
-      for (const product of batch) {
-        await addDoc(inventoryRef, product);
-      }
-      setBulkProducts([]);
-      await fetchProducts();
-    } catch (error) {
-      console.error("Error during bulk submit:", error);
-    }
-  };
-
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Ensure filteredProducts is derived correctly
+  const filteredProducts = Array.isArray(products)
+    ? products.filter(product => {
+        const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+        const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      })
+    : []; // Fallback if products is not an array
 
   return (
     <div style={{ padding: '20px' }}>
@@ -130,20 +109,15 @@ const Inventory = () => {
         editingItem={editingItem}
       />
 
-      <BulkAddForm 
-        bulkProducts={bulkProducts}
-        setBulkProducts={setBulkProducts}
-        handleBulkSubmit={handleBulkSubmit}
-      />
+      <BulkAddForm user={user} fetchProducts={fetchProducts} />
 
       <button onClick={exportToExcel}>Download Inventory Excel</button>
 
       <InventoryTable 
-        products={filteredProducts} 
-        fetchProducts={fetchProducts} 
-        setEditingItem={(item) => {
-          setEditingItem(item);
-          setNewProduct(item);
+        filteredProducts={filteredProducts}  // Ensure filteredProducts is passed
+        handleEdit={(product) => { setEditingItem(product); setNewProduct(product); }}
+        handleDelete={(id) => {
+          // Handle delete logic
         }}
         selectedCategory={selectedCategory} 
         setSelectedCategory={setSelectedCategory} 
