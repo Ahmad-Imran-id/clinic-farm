@@ -49,37 +49,48 @@ const Inventory = () => {
   };
 
   const handleAddOrUpdateProduct = async () => {
-    if (!newProduct.name) return;
+  // Check if user is authenticated
+  if (!user) {
+    console.error('User is not authenticated.');
+    return;
+  }
 
-    const productRef = doc(db, `users/${user.uid}/inventory`, newProduct.name);
-    const productData = {
-      ...newProduct,
-      price: parseFloat(newProduct.price),
-      quantity: parseInt(newProduct.quantity),
-      unitsPerPack: parseInt(newProduct.unitsPerPack),
-    };
+  // Check if the product name is empty
+  if (!newProduct.name) return;
 
-    try {
-      if (editingItem) {
-        await updateDoc(productRef, productData);
-      } else {
-        await setDoc(productRef, productData);
-      }
-
-      await fetchProducts();
-      setNewProduct({
-        name: '',
-        price: '',
-        quantity: '',
-        unitsPerPack: '',
-        unitType: '',
-        category: 'Tablet',
-      });
-      setEditingItem(null);
-    } catch (error) {
-      console.error("Error saving product:", error);
-    }
+  // Proceed with the product addition or update
+  const productRef = doc(db, `users/${user.uid}/inventory`, newProduct.name);
+  const productData = {
+    ...newProduct,
+    price: parseFloat(newProduct.price),
+    quantity: parseInt(newProduct.quantity),
+    unitsPerPack: parseInt(newProduct.unitsPerPack),
   };
+
+  try {
+    if (editingItem) {
+      // Update existing product
+      await updateDoc(productRef, productData);
+    } else {
+      // Add new product
+      await setDoc(productRef, productData);
+    }
+
+    await fetchProducts();
+    setNewProduct({
+      name: '',
+      price: '',
+      quantity: '',
+      unitsPerPack: '',
+      unitType: '',
+      category: 'Tablet',
+    });
+    setEditingItem(null);
+  } catch (error) {
+    console.error("Error saving product:", error);
+  }
+};
+
 
   // Ensure filteredProducts is derived correctly
   const filteredProducts = Array.isArray(products)
