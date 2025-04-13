@@ -12,6 +12,8 @@ import ProtectedRoute from './components/ProtectedRoute'; // ✅ custom wrapper
 // ✅ optional page for forbidden access
 import { useAuth } from './hooks/useAuth'; // Import useAuth hook for authentication state
 import 'bootstrap/dist/css/bootstrap.min.css';
+import Unauthorized from './pages/Unauthorized';
+
 
 function App() {
   const { currentUser, role } = useAuth(); // Using useAuth to get current user and role
