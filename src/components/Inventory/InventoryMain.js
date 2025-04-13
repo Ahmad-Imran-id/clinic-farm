@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase-config';
 import { collection, getDocs } from 'firebase/firestore';
-import { useAuth } from '../../authContext';
+import { useAuth } from '../hooks/useAuth'; // Adjust path based on actual location
 import InventoryForm from './InventoryForm';
 import BulkAddForm from './BulkAddForm';
 import InventoryTable from './InventoryTable';
