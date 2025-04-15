@@ -14,7 +14,9 @@ const InventoryForm = ({
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault(); // Prevent default form submission behavior
+    e.preventDefault();
+    console.log('➡️ Form submitted with values:', newProduct);
+    // Prevent default form submission behavior
     if (!newProduct.name || !newProduct.price || !newProduct.quantity) {
       alert('Please fill in all required fields.');
       return;
