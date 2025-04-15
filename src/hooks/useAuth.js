@@ -6,26 +6,30 @@ import { onAuthStateChanged } from "firebase/auth";
 export const useAuth = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true); // Add loading state
+  const [loading, setLoading] = useState(true); // helps with async loading
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setRole(userSnap.data().role);
+        try {
+          const userRef = doc(db, "users", user.email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setRole(userSnap.data().role);
+          }
+        } catch (err) {
+          console.error("Error fetching user role:", err);
         }
       } else {
         setCurrentUser(null);
         setRole(null);
       }
-      setLoading(false); // Stop loading after data is fetched
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  return { currentUser, role, loading }; // Return loading state
+  return { currentUser, role, loading, user: currentUser }; // added 'user' alias for consistency
 };
