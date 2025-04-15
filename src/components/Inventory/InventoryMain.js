@@ -54,6 +54,7 @@ const Inventory = () => {
     console.error('User is not authenticated.');
     return;
   }
+  console.log('🛠 Adding/Updating product with data:', newProduct);
 
   // Check if the product name is empty
   if (!newProduct.name) return;
@@ -86,9 +87,11 @@ const Inventory = () => {
       category: 'Tablet',
     });
     setEditingItem(null);
-  } catch (error) {
-    console.error("Error saving product:", error);
-  }
+} catch (error) {
+  console.error("❌ Error saving product:", error);
+  alert("Error saving product: " + error.message);
+}
+
 };
 
 
