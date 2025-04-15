@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { auth } from "./firebase-config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -8,18 +8,27 @@ function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const userUID = localStorage.getItem("userUID");
+    if (userUID) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
+
   const handleLogin = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // Optional: store UID locally to use in app (temporary/local)
+      // Store UID locally to use in app
       localStorage.setItem("userUID", uid);
 
       // Navigate after successful login
       navigate("/dashboard");
     } catch (err) {
-      alert("Login Failed: " + err.message);
+      // Better error handling: Provide user-friendly message
+      alert("Login Failed: Invalid email or password. Please try again.");
     }
   };
 
