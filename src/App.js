@@ -80,7 +80,7 @@ function App() {
             path="/admin-staff-dashboard"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <AdminStaffDashboard />
+                <AdminStaffDashboard currentUser={currentUser}/>
               </ProtectedRoute>
             }
           />
