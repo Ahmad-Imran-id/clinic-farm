@@ -43,11 +43,21 @@ const AdminStaffDashboard = ({ currentUser }) => {
 
 const handleCreateStaff = async () => {
   const { email, password, name } = newStaff;
+  
+  // Check if all required fields are filled
   if (!email || !password || !name) {
     return alert("All fields are required.");
   }
+  
+  // Ensure adminUID is available
+  if (!adminUID) {
+    console.error("Admin UID is undefined");
+    return alert("Admin information unavailable. Please try logging in again.");
+  }
 
   try {
+    console.log("Creating staff account with admin UID:", adminUID);
+    
     // Step 1: Create staff in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const staffUID = userCredential.user.uid;
@@ -61,20 +71,20 @@ const handleCreateStaff = async () => {
       createdAt: new Date().toISOString(),
     });
 
-    // ✅ Step 3: Save to /users/{uid} for login and role recognition
+    // Step 3: Save to /users/{uid} for login and role recognition
     await setDoc(doc(db, "users", staffUID), {
       uid: staffUID,
       name,
       email,
       role: "staff",
-      adminUID: adminUID,
+      adminUID, // Using the verified adminUID
       createdAt: new Date().toISOString(),
     });
 
     setMessage("✅ Staff account created successfully!");
     setNewStaff({ name: "", email: "", password: "" });
   } catch (err) {
-    console.error("Error creating staff:", err.message);
+    console.error("Error creating staff:", err);
     alert("Failed to create staff: " + err.message);
   }
 };
