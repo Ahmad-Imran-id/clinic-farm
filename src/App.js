@@ -22,27 +22,25 @@ function App() {
   return (
     <Router>
       <div className="App">
-        // Replace your <nav> block with this:
-<nav className="tab-nav">
-  {!currentUser ? (
-    <>
-      <Link to="/login">Login</Link> | 
-      <Link to="/signup">Sign Up</Link>
-    </>
-  ) : (
-    <>
-      <Link to="/dashboard">Dashboard</Link> | 
-      <Link to="/inventory">Inventory</Link> | 
-      <Link to="/billing">Billing</Link> |
-      <Link to="/reports">Reports</Link> |
-      {role === "admin" && <Link to="/admin-staff-dashboard">Admin Tools</Link>}
-    </>
-  )}
-</nav>
-
+        <nav className="tab-nav">
+          {!currentUser ? (
+            <>
+              <Link to="/login">Login</Link> | 
+              <Link to="/signup">Sign Up</Link>
+            </>
+          ) : (
+            <>
+              <Link to="/dashboard">Dashboard</Link> | 
+              <Link to="/inventory">Inventory</Link> | 
+              <Link to="/billing">Billing</Link> |
+              <Link to="/reports">Reports</Link> |
+              {role === "admin" && <Link to="/admin-staff-dashboard">Admin Tools</Link>}
+            </>
+          )}
+        </nav>
 
         <Routes>
-          {/* Public */}
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
