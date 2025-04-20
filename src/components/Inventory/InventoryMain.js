@@ -132,9 +132,9 @@ const Inventory = () => {
       <BulkAddForm
         bulkProducts={bulkProducts}
         setBulkProducts={setBulkProducts}
-        fetchProducts={fetchProducts}
-        user={user}
+        handleBulkSubmit={handleBulkSubmit}
       />
+
 
       <button onClick={exportToExcel}>Download Inventory Excel</button>
 
