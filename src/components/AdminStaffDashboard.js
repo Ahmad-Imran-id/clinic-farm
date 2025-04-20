@@ -40,33 +40,44 @@ const AdminStaffDashboard = ({ currentUser }) => {
     return () => unsubscribe();
   }, [adminUID]);
 
-  const handleCreateStaff = async () => {
-    const { email, password, name } = newStaff;
-    if (!email || !password || !name) {
-      return alert("All fields are required.");
-    }
+const handleCreateStaff = async () => {
+  const { email, password, name } = newStaff;
+  if (!email || !password || !name) {
+    return alert("All fields are required.");
+  }
 
-    try {
-      // Create staff in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const staffUID = userCredential.user.uid;
+  try {
+    // Create staff in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const staffUID = userCredential.user.uid;
 
-      // Save staff info under admin's Firestore scope
-      await addDoc(collection(db, `admins/${adminUID}/staff`), {
-        name,
-        email,
-        staffUID,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-      });
+    // 🔥 Add to Firestore users collection (needed for login role detection)
+    await setDoc(doc(db, "users", staffUID), {
+      uid: staffUID,
+      email,
+      name,
+      role: "staff",
+      adminUID,
+      createdAt: new Date().toISOString(),
+    });
 
-      setMessage("Staff account created successfully!");
-      setNewStaff({ name: "", email: "", password: "" });
-    } catch (err) {
-      console.error("Error creating staff:", err.message);
-      alert("Failed to create staff: " + err.message);
-    }
-  };
+    // 🔥 Save under admin scope (for admin's staff list)
+    await addDoc(collection(db, `admins/${adminUID}/staff`), {
+      name,
+      email,
+      staffUID,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    });
+
+    setMessage("Staff account created successfully!");
+    setNewStaff({ name: "", email: "", password: "" });
+  } catch (err) {
+    console.error("Error creating staff:", err.message);
+    alert("Failed to create staff: " + err.message);
+  }
+};
+
 
   const toggleBlockStaff = async (staffId, isActive) => {
     const staffRef = doc(db, `admins/${adminUID}/staff`, staffId);
