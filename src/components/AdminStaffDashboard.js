@@ -11,6 +11,7 @@ import {
   onSnapshot,
   query,
   where,
+  setDoc
 } from "firebase/firestore";
 import { auth, db } from "../firebase-config";
 import { Button, Form, Table, Alert } from "react-bootstrap";
