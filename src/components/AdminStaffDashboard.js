@@ -48,21 +48,11 @@ const handleCreateStaff = async () => {
   }
 
   try {
-    // Create staff in Firebase Auth
+    // Step 1: Create staff in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const staffUID = userCredential.user.uid;
 
-    // 🔥 Add to Firestore users collection (needed for login role detection)
-    await setDoc(doc(db, "users", staffUID), {
-      uid: staffUID,
-      email,
-      name,
-      role: "staff",
-      adminUID,
-      createdAt: new Date().toISOString(),
-    });
-
-    // 🔥 Save under admin scope (for admin's staff list)
+    // Step 2: Save staff info under admin's staff subcollection
     await addDoc(collection(db, `admins/${adminUID}/staff`), {
       name,
       email,
@@ -71,7 +61,17 @@ const handleCreateStaff = async () => {
       createdAt: new Date().toISOString(),
     });
 
-    setMessage("Staff account created successfully!");
+    // ✅ Step 3: Save to /users/{uid} for login and role recognition
+    await setDoc(doc(db, "users", staffUID), {
+      uid: staffUID,
+      name,
+      email,
+      role: "staff",
+      adminUID: adminUID,
+      createdAt: new Date().toISOString(),
+    });
+
+    setMessage("✅ Staff account created successfully!");
     setNewStaff({ name: "", email: "", password: "" });
   } catch (err) {
     console.error("Error creating staff:", err.message);
