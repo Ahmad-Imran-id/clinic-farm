@@ -22,22 +22,24 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <nav className="tab-nav" style={{ margin: '1rem' }}>
-          {!currentUser ? (
-            <>
-              <Link to="/login">Login</Link> |{" "}
-              <Link to="/signup">Sign Up</Link>
-            </>
-          ) : (
-            <>
-              <Link to="/dashboard">Dashboard</Link> |{" "}
-              <Link to="/inventory">Inventory</Link> |{" "}
-              <Link to="/billing">Billing</Link> |{" "}
-              <Link to="/reports">Reports</Link> |{" "}
-              {role === 'admin' && <Link to="/admin-staff-dashboard">Admin Tools</Link>}
-            </>
-          )}
-        </nav>
+        // Replace your <nav> block with this:
+<nav className="tab-nav">
+  {!currentUser ? (
+    <>
+      <Link to="/login">Login</Link> | 
+      <Link to="/signup">Sign Up</Link>
+    </>
+  ) : (
+    <>
+      <Link to="/dashboard">Dashboard</Link> | 
+      <Link to="/inventory">Inventory</Link> | 
+      <Link to="/billing">Billing</Link> |
+      <Link to="/reports">Reports</Link> |
+      {role === "admin" && <Link to="/admin-staff-dashboard">Admin Tools</Link>}
+    </>
+  )}
+</nav>
+
 
         <Routes>
           {/* Public */}
