@@ -1,17 +1,11 @@
 import React from 'react';
-import BillingForm from './BillingForm';
-import BillingCart from './BillingCart';
-import BillingSummary from './BillingSummary';
-import BillingExport from './BillingExport';
+import BillingMain from './BillingMain';
 
 const BillingPage = () => {
   return (
-    <div className="billing-container">
+    <div className="billing-container p-4">
       <h1 className="text-2xl font-bold mb-4">Billing</h1>
-      <BillingForm />
-      <BillingCart />
-      <BillingSummary />
-      <BillingExport />
+      <BillingMain />
     </div>
   );
 };
