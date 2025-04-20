@@ -1,28 +1,87 @@
 import { db } from '../firebase-config';
-import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  Timestamp,
+  updateDoc,
+  doc,
+  arrayUnion 
+} from 'firebase/firestore';
 import { getCurrentUserUid } from './authUtils';
-
 
 export const fetchProductByBarcode = async (barcode) => {
   const userId = getCurrentUserUid();
-  const q = query(collection(db, 'inventory'), where('barcode', '==', barcode), where('userId', '==', userId));
+  if (!userId) throw new Error('User not authenticated');
+  
+  const q = query(
+    collection(db, 'inventory'), 
+    where('barcode', '==', barcode), 
+    where('userId', '==', userId)
+  );
   const snapshot = await getDocs(q);
-  return snapshot.empty ? null : snapshot.docs[0].data();
+  return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 };
 
 export const fetchProductSuggestions = async (searchTerm, userId) => {
-  const q = query(collection(db, 'inventory'), where('name', '>=', searchTerm), where('userId', '==', userId));
+  if (!searchTerm.trim()) return [];
+  
+  const q = query(
+    collection(db, 'inventory'),
+    where('name', '>=', searchTerm),
+    where('name', '<=', searchTerm + '\uf8ff'),
+    where('userId', '==', userId)
+  );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => doc.data());
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-export const saveBillingData = async (cartItems) => {
-  const userId = getCurrentUserUid();
-  const salesRef = collection(db, 'sales');
+export const saveBillingData = async (cartItems, userId) => {
+  if (!cartItems.length) throw new Error('Cart is empty');
+  if (!userId) throw new Error('User not authenticated');
+
+  const batch = [];
+  
+  // 1. Create sale record
   const saleData = {
     userId,
-    items: cartItems,
+    items: cartItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity
+    })),
+    total: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
     date: Timestamp.now()
   };
-  await addDoc(salesRef, saleData);
+  batch.push(addDoc(collection(db, 'sales'), saleData));
+
+  // 2. Update inventory stock (if you have inventory management)
+  cartItems.forEach(item => {
+    if (item.id) {
+      const itemRef = doc(db, 'inventory', item.id);
+      batch.push(updateDoc(itemRef, {
+        stock: arrayUnion({
+          date: Timestamp.now(),
+          change: -item.quantity,
+          type: 'sale'
+        })
+      }));
+    }
+  });
+
+  await Promise.all(batch);
+};
+
+// Add this if not existing
+export const getSalesHistory = async (userId) => {
+  const q = query(
+    collection(db, 'sales'),
+    where('userId', '==', userId),
+    orderBy('date', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
