@@ -1,4 +1,3 @@
-// src/Signup.js
 import React, { useState } from "react";
 import { auth, db } from "./firebase-config";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -8,33 +7,36 @@ import { useNavigate } from "react-router-dom";
 function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [adminEmail, setAdminEmail] = useState(""); // only for staff
+  const [adminEmail, setAdminEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("admin"); // admin or staff
+  const [role, setRole] = useState("admin");
   const navigate = useNavigate();
 
   const handleSignup = async () => {
     try {
-      // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       let associatedAdminUID = user.uid;
 
       if (role === "staff") {
-        const adminDocRef = doc(db, "users", adminEmail);
-        const adminDocSnap = await getDoc(adminDocRef);
+        // Find admin doc by email
+        const adminQuery = doc(db, "users", user.uid); // Use new user's UID temporarily
+        const adminDocs = await getDocs(collection(db, "users"));
+        const matchedAdmin = adminDocs.docs.find(
+          (doc) => doc.data().email === adminEmail && doc.data().role === "admin"
+        );
 
-        if (!adminDocSnap.exists()) {
-          alert("Admin not found.");
+        if (!matchedAdmin) {
+          alert("Admin not found for this email.");
           return;
         }
 
-        associatedAdminUID = adminDocSnap.data().uid;
+        associatedAdminUID = matchedAdmin.data().uid;
       }
 
-      // Create Firestore user doc
-      await setDoc(doc(db, "users", user.email), {
+      // ✅ Store user document under their UID
+      await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
         email,
@@ -43,7 +45,6 @@ function Signup() {
         createdAt: serverTimestamp(),
       });
 
-      // Optional: initialize admin data tree
       if (role === "admin") {
         await setDoc(doc(db, "adminData", user.uid), {
           name,
@@ -51,7 +52,7 @@ function Signup() {
         });
       }
 
-      // ✅ Allow time for role to sync to Firestore before routing
+      // 🔁 Slight delay to let role info propagate before ProtectedRoute checks it
       setTimeout(() => {
         navigate("/dashboard");
       }, 1000);
