@@ -26,6 +26,29 @@ const Inventory = () => {
   const [bulkProducts, setBulkProducts] = useState([
     { name: '', price: '', quantity: '', unitsPerPack: '', unitType: '', category: 'Tablet' }
   ]);
+  
+  const handleBulkSubmit = async () => {
+  if (!user) return;
+  const userInventoryRef = collection(db, `users/${user.uid}/inventory`);
+
+  try {
+    for (const product of bulkProducts) {
+      if (!product.name) continue;
+      const productRef = doc(userInventoryRef, product.name);
+      await setDoc(productRef, {
+        ...product,
+        price: parseFloat(product.price),
+        quantity: parseInt(product.quantity),
+        unitsPerPack: parseInt(product.unitsPerPack),
+      });
+    }
+    alert("Bulk products added.");
+    fetchProducts();
+    setBulkProducts([{ name: '', price: '', quantity: '', unitsPerPack: '', unitType: '', category: 'Tablet' }]);
+  } catch (err) {
+    console.error("Bulk add failed:", err);
+  }
+};
 
   const fetchProducts = async () => {
     if (!user || !user.uid) return;
