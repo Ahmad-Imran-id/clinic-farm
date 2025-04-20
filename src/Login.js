@@ -15,7 +15,7 @@ function Login() {
       const uid = userCredential.user.uid;
 
       // Make sure role exists before redirect
-      const userDocRef = doc(db, "users", email);
+      const userDocRef = doc(db, "users", uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
