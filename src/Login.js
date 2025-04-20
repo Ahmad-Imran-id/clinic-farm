@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { auth } from "./firebase-config";
+import React, { useState } from "react";
+import { auth, db } from "./firebase-config";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
@@ -8,27 +9,26 @@ function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const userUID = localStorage.getItem("userUID");
-    if (userUID) {
-      navigate("/dashboard");
-    }
-  }, [navigate]);
-
   const handleLogin = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // Store UID locally to use in app
-      localStorage.setItem("userUID", uid);
+      // Make sure role exists before redirect
+      const userDocRef = doc(db, "users", email);
+      const userDocSnap = await getDoc(userDocRef);
 
-      // Navigate after successful login
+      if (!userDocSnap.exists()) {
+        alert("User role not found in database.");
+        return;
+      }
+
+      const role = userDocSnap.data().role;
+
+      // Redirect based on role (optional)
       navigate("/dashboard");
     } catch (err) {
-      // Better error handling: Provide user-friendly message
-      alert("Login Failed: Invalid email or password. Please try again.");
+      alert("Login Failed: " + err.message);
     }
   };
 
