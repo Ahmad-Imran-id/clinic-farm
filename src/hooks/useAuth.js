@@ -6,14 +6,14 @@ import { onAuthStateChanged } from "firebase/auth";
 export const useAuth = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true); // helps with async loading
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
         try {
-          const userRef = doc(db, "users", user.email);
+          const userRef = doc(db, "users", user.uid); // ✅ fixed
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
             setRole(userSnap.data().role);
@@ -31,5 +31,5 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
-  return { currentUser, role, loading, user: currentUser }; // added 'user' alias for consistency
+  return { currentUser, role, loading, user: currentUser };
 };
