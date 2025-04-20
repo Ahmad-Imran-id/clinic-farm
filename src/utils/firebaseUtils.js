@@ -8,7 +8,8 @@ import {
   Timestamp,
   updateDoc,
   doc,
-  arrayUnion 
+  arrayUnion,
+  orderBy  // Added this import
 } from 'firebase/firestore';
 import { getCurrentUserUid } from './authUtils';
 
@@ -58,7 +59,7 @@ export const saveBillingData = async (cartItems, userId) => {
   };
   batch.push(addDoc(collection(db, 'sales'), saleData));
 
-  // 2. Update inventory stock (if you have inventory management)
+  // 2. Update inventory stock
   cartItems.forEach(item => {
     if (item.id) {
       const itemRef = doc(db, 'inventory', item.id);
@@ -75,12 +76,11 @@ export const saveBillingData = async (cartItems, userId) => {
   await Promise.all(batch);
 };
 
-// Add this if not existing
 export const getSalesHistory = async (userId) => {
   const q = query(
     collection(db, 'sales'),
     where('userId', '==', userId),
-    orderBy('date', 'desc')
+    orderBy('date', 'desc')  // Now properly imported
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
