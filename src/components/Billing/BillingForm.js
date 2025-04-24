@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { Form, Button, ListGroup, Spinner, Alert } from 'react-bootstrap';
 import { fetchProductByBarcode, fetchProductSuggestions } from '../../utils/firebaseUtils';
 import { getCurrentUserUid } from '../../utils/authUtils';
 
@@ -7,111 +7,151 @@ const BillingForm = ({ onAddToCart }) => {
   const [barcode, setBarcode] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [partialQty, setPartialQty] = useState(1);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setSuggestions([]);
-      return;
-    }
-    
-    const timer = setTimeout(async () => {
-      try {
-        setIsLoading(true);
-        const userId = getCurrentUserUid();
-        if (!userId) return;
-        
-        const results = await fetchProductSuggestions(searchTerm, userId);
-        setSuggestions(results);
-      } catch (error) {
-        console.error('Error fetching suggestions:', error);
-      } finally {
-        setIsLoading(false);
+    const delayDebounce = setTimeout(async () => {
+      if (searchTerm.trim().length > 0) {
+        setLoading(true);
+        try {
+          const userId = getCurrentUserUid();
+          const results = await fetchProductSuggestions(searchTerm, userId);
+          setSuggestions(results);
+          setError(null);
+        } catch (err) {
+          setError('Failed to fetch suggestions');
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setSuggestions([]);
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
   const handleScan = async () => {
     if (!barcode.trim()) return;
-    
+    setLoading(true);
     try {
-      setIsLoading(true);
       const product = await fetchProductByBarcode(barcode);
       if (product) {
-        onAddToCart(product);
-        setBarcode('');
+        setSelectedProduct(product);
+        setError(null);
       } else {
-        alert('Product not found!');
+        setError('Product not found');
       }
-    } catch (error) {
-      console.error('Scan failed:', error);
-      alert('Failed to scan product');
+    } catch (err) {
+      setError('Scan failed');
+      console.error(err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      setBarcode('');
+    }
+  };
+
+  const handleAddPartial = () => {
+    if (selectedProduct) {
+      onAddToCart({
+        ...selectedProduct,
+        quantity: partialQty,
+        isPartial: selectedProduct.unitsPerPack > 1
+      });
+      setSelectedProduct(null);
+      setPartialQty(1);
     }
   };
 
   return (
-    <div className="billing-form space-y-2">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={barcode}
-          onChange={e => setBarcode(e.target.value)}
-          onKeyPress={e => e.key === 'Enter' && handleScan()}
-          placeholder="Scan barcode"
-          className="input flex-1"
-          disabled={isLoading}
-        />
-        <button 
-          onClick={handleScan} 
-          className="btn"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Scanning...' : 'Scan'}
-        </button>
-      </div>
+    <>
+      <Form.Group className="mb-3">
+        <Form.Label>Barcode Scanner</Form.Label>
+        <div className="d-flex">
+          <Form.Control
+            type="text"
+            value={barcode}
+            onChange={(e) => setBarcode(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleScan()}
+            placeholder="Scan barcode"
+          />
+          <Button 
+            variant="primary" 
+            onClick={handleScan} 
+            disabled={loading}
+            className="ms-2"
+          >
+            {loading ? <Spinner animation="border" size="sm" /> : 'Scan'}
+          </Button>
+        </div>
+      </Form.Group>
 
-      <div className="relative">
-        <input
+      <Form.Group className="mb-3">
+        <Form.Label>Product Search</Form.Label>
+        <Form.Control
           type="text"
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          placeholder="Search product"
-          className="input w-full"
-          disabled={isLoading}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search products..."
         />
-        {isLoading && (
-          <div className="absolute right-2 top-2">
-            <span className="loading-spinner"></span>
-          </div>
-        )}
+        {loading && <div className="mt-2"><Spinner animation="border" size="sm" /></div>}
+        
         {suggestions.length > 0 && (
-          <ul className="suggestions-list absolute z-10 w-full bg-white border rounded shadow-lg">
-            {suggestions.map(item => (
-              <li 
-                key={item.id}
-                className="p-2 hover:bg-gray-100 cursor-pointer"
+          <ListGroup className="mt-2">
+            {suggestions.map((product) => (
+              <ListGroup.Item 
+                key={product.id}
+                action
                 onClick={() => {
-                  onAddToCart(item);
+                  setSelectedProduct(product);
                   setSearchTerm('');
                   setSuggestions([]);
                 }}
               >
-                {item.name} - ₹{item.price.toFixed(2)} ({item.stock} in stock)
-              </li>
+                {product.name} ({product.unitsPerPack} {product.unitType || 'units'})
+              </ListGroup.Item>
             ))}
-          </ul>
+          </ListGroup>
         )}
-      </div>
-    </div>
-  );
-};
+      </Form.Group>
 
-BillingForm.propTypes = {
-  onAddToCart: PropTypes.func.isRequired
+      {selectedProduct && selectedProduct.unitsPerPack > 1 && (
+        <Card className="mb-3">
+          <Card.Body>
+            <h5>{selectedProduct.name}</h5>
+            <p>Pack Size: {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</p>
+            <Form.Group>
+              <Form.Label>Quantity to sell:</Form.Label>
+              <div className="d-flex align-items-center">
+                <Form.Control
+                  type="number"
+                  min="1"
+                  max={selectedProduct.unitsPerPack}
+                  value={partialQty}
+                  onChange={(e) => setPartialQty(Math.min(selectedProduct.unitsPerPack, parseInt(e.target.value) || 1)}
+                  style={{ width: '80px' }}
+                />
+                <span className="ms-2">/ {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</span>
+                <Button 
+                  variant="success" 
+                  onClick={handleAddPartial}
+                  className="ms-3"
+                >
+                  Add to Cart
+                </Button>
+              </div>
+            </Form.Group>
+          </Card.Body>
+        </Card>
+      )}
+
+      {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+    </>
+  );
 };
 
 export default BillingForm;
