@@ -14,29 +14,43 @@ const BillingMain = () => {
 
   const handleAddToCart = (product) => {
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
-      if (existingItem) {
-        return prevItems.map(item =>
-          item.id === product.id 
-            ? {...item, quantity: item.quantity + 1} 
-            : item
-        );
+      // Check if the product already exists in cart
+      const existingItemIndex = prevItems.findIndex(item => 
+        item.id === product.id && item.isPartial === product.isPartial
+      );
+      
+      if (existingItemIndex >= 0) {
+        // Update quantity for existing item
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + product.quantity
+        };
+        return updatedItems;
+      } else {
+        // Add new item to cart
+        return [...prevItems, {
+          ...product,
+          packSize: product.unitsPerPack || 1,
+          unit: product.unitType || 'unit'
+        }];
       }
-      return [...prevItems, {
-        ...product,
-        quantity: 1,
-        isPartial: false,
-        packSize: product.unitsPerPack || 1,
-        unit: product.unitType || 'unit'
-      }];
     });
   };
 
   const handleUpdateQuantity = (index, newQuantity) => {
     setCartItems(prevItems => 
-      prevItems.map((item, i) => 
-        i === index ? {...item, quantity: Math.max(1, parseInt(newQuantity) || 1)} : item
-      )
+      prevItems.map((item, i) => {
+        if (i === index) {
+          const qty = Math.max(1, parseInt(newQuantity) || 1);
+          // For partial items, ensure we don't exceed pack size
+          if (item.isPartial) {
+            return {...item, quantity: Math.min(qty, item.packSize)};
+          }
+          return {...item, quantity: qty};
+        }
+        return item;
+      })
     );
   };
 
@@ -45,6 +59,11 @@ const BillingMain = () => {
   };
 
   const handleCheckout = async () => {
+    if (cartItems.length === 0) {
+      setAlert({ variant: 'warning', message: 'Your cart is empty!' });
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const userId = getCurrentUserUid();
