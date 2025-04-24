@@ -18,6 +18,9 @@ const BillingForm = ({ onAddToCart }) => {
         setLoading(true);
         try {
           const userId = getCurrentUserUid();
+          if (!userId) throw new Error('User not authenticated');
+          
+          // Access the user's inventory collection
           const results = await fetchProductSuggestions(searchTerm, userId);
           setSuggestions(results);
           setError(null);
@@ -39,7 +42,10 @@ const BillingForm = ({ onAddToCart }) => {
     if (!barcode.trim()) return;
     setLoading(true);
     try {
-      const product = await fetchProductByBarcode(barcode);
+      const userId = getCurrentUserUid();
+      if (!userId) throw new Error('User not authenticated');
+      
+      const product = await fetchProductByBarcode(barcode, userId);
       if (product) {
         setSelectedProduct(product);
         setError(null);
@@ -55,16 +61,38 @@ const BillingForm = ({ onAddToCart }) => {
     }
   };
 
-  const handleAddPartial = () => {
+  const handleAddToCart = () => {
     if (selectedProduct) {
-      onAddToCart({
-        ...selectedProduct,
-        quantity: partialQty,
-        isPartial: selectedProduct.unitsPerPack > 1
-      });
+      // For non-partial sales or single unit products
+      if (selectedProduct.unitsPerPack <= 1 || partialQty === selectedProduct.unitsPerPack) {
+        onAddToCart({
+          ...selectedProduct,
+          quantity: 1,
+          isPartial: false,
+          packSize: selectedProduct.unitsPerPack || 1,
+          unit: selectedProduct.unitType || 'unit'
+        });
+      } else {
+        // For partial sales (individual units from a pack)
+        onAddToCart({
+          ...selectedProduct,
+          quantity: partialQty,
+          isPartial: true,
+          packSize: selectedProduct.unitsPerPack || 1,
+          unit: selectedProduct.unitType || 'unit'
+        });
+      }
       setSelectedProduct(null);
       setPartialQty(1);
+      setSearchTerm('');
+      setSuggestions([]);
     }
+  };
+
+  const handleSelectProduct = (product) => {
+    setSelectedProduct(product);
+    setSearchTerm('');
+    setSuggestions([]);
   };
 
   return (
@@ -106,45 +134,50 @@ const BillingForm = ({ onAddToCart }) => {
               <ListGroup.Item 
                 key={product.id}
                 action
-                onClick={() => {
-                  setSelectedProduct(product);
-                  setSearchTerm('');
-                  setSuggestions([]);
-                }}
+                onClick={() => handleSelectProduct(product)}
               >
-                {product.name} ({product.unitsPerPack} {product.unitType || 'units'})
+                {product.name} ({product.unitsPerPack || 1} {product.unitType || 'units'})
               </ListGroup.Item>
             ))}
           </ListGroup>
         )}
       </Form.Group>
 
-      {selectedProduct && selectedProduct.unitsPerPack > 1 && (
+      {selectedProduct && (
         <Card className="mb-3">
           <Card.Body>
             <h5>{selectedProduct.name}</h5>
-            <p>Pack Size: {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</p>
-            <Form.Group>
-              <Form.Label>Quantity to sell:</Form.Label>
-              <div className="d-flex align-items-center">
-                <Form.Control
-                  type="number"
-                  min="1"
-                  max={selectedProduct.unitsPerPack}
-                  value={partialQty}
-                  onChange={(e) => setPartialQty(Math.min(selectedProduct.unitsPerPack, parseInt(e.target.value) || 1))}
-                  style={{ width: '80px' }}
-                />
-                <span className="ms-2">/ {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</span>
-                <Button 
-                  variant="success" 
-                  onClick={handleAddPartial}
-                  className="ms-3"
-                >
-                  Add to Cart
-                </Button>
-              </div>
-            </Form.Group>
+            <p>Price: ₹{selectedProduct.price}</p>
+            
+            {selectedProduct.unitsPerPack > 1 ? (
+              <>
+                <p>Pack Size: {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</p>
+                <Form.Group>
+                  <Form.Label>Quantity to sell:</Form.Label>
+                  <div className="d-flex align-items-center">
+                    <Form.Control
+                      type="number"
+                      min="1"
+                      max={selectedProduct.unitsPerPack}
+                      value={partialQty}
+                      onChange={(e) => setPartialQty(Math.min(selectedProduct.unitsPerPack, Math.max(1, parseInt(e.target.value) || 1)))}
+                      style={{ width: '80px' }}
+                    />
+                    <span className="ms-2">/ {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</span>
+                  </div>
+                </Form.Group>
+              </>
+            ) : (
+              <p>Single unit product</p>
+            )}
+            
+            <Button 
+              variant="success" 
+              onClick={handleAddToCart}
+              className="mt-3"
+            >
+              Add to Cart
+            </Button>
           </Card.Body>
         </Card>
       )}
