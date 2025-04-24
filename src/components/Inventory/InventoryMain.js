@@ -7,11 +7,11 @@ import SearchBar from './SearchBar';
 import * as XLSX from 'xlsx';
 import { 
   fetchInventoryData, 
-  addInventoryItem, 
-  updateInventoryItem,
+  addOrUpdateItem as addInventoryItem,
+  updateDoc as updateInventoryItem,
   deleteInventoryItem,
-  bulkAddInventoryItems
-} from '../../utils/firebaseUtils';
+  bulkAddItems as bulkAddInventoryItems
+} from './inventoryUtils';
 
 const Inventory = () => {
   const { user } = useAuth();
