@@ -1,44 +1,53 @@
 import React from 'react';
+import { Table, Badge } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
 const BillingCart = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
   return (
     <div className="billing-cart">
-      <h2>Cart</h2>
       {cartItems.length === 0 ? (
-        <p>Your cart is empty</p>
+        <div className="text-center py-3">
+          <p className="text-muted">Your cart is empty</p>
+        </div>
       ) : (
-        <table className="table">
+        <Table striped bordered hover responsive>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Category</th>
+              <th>Product</th>
+              <th>Pack Details</th>
               <th>Qty</th>
-              <th>Price</th>
+              <th>Unit Price</th>
               <th>Subtotal</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {cartItems.map((item, idx) => (
-              <tr key={`${item.id}-${idx}`}>
-                <td>{item.name}</td>
-                <td>{item.category}</td>
+            {cartItems.map((item, index) => (
+              <tr key={`${item.id}-${index}`}>
+                <td>
+                  {item.name}
+                  {item.isPartial && <Badge bg="info" className="ms-2">Partial</Badge>}
+                </td>
+                <td>
+                  {item.packSize} {item.unit}
+                </td>
                 <td>
                   <input
                     type="number"
                     min="1"
+                    max={item.packSize}
                     value={item.quantity}
-                    onChange={e => onUpdateQuantity(idx, e.target.value)}
-                    className="input"
+                    onChange={(e) => onUpdateQuantity(index, e.target.value)}
+                    className="form-control form-control-sm"
+                    style={{ width: '70px' }}
                   />
                 </td>
                 <td>₹{item.price.toFixed(2)}</td>
                 <td>₹{(item.price * item.quantity).toFixed(2)}</td>
                 <td>
                   <button 
-                    onClick={() => onRemoveItem(idx)} 
-                    className="btn-red"
+                    onClick={() => onRemoveItem(index)}
+                    className="btn btn-sm btn-outline-danger"
                   >
                     Remove
                   </button>
@@ -46,7 +55,7 @@ const BillingCart = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
     </div>
   );
