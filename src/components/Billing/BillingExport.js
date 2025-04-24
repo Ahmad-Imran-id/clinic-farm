@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 import * as XLSX from 'xlsx';
 import { saveBillingData } from '../../utils/firebaseUtils';
@@ -19,13 +20,16 @@ const BillingExport = ({ cartItems }) => {
       await saveBillingData(cartItems, userId);
       
       // Then export to Excel
-      const worksheet = XLSX.utils.json_to_sheet(cartItems.map(item => ({
-        Name: item.name,
-        Category: item.category,
-        Quantity: item.quantity,
-        'Unit Price': item.price,
-        'Total Price': (item.price * item.quantity).toFixed(2)
-      })));
+      const worksheet = XLSX.utils.json_to_sheet(
+        cartItems.map(item => ({
+          'Product Name': item.name,
+          'Pack Size': `${item.packSize} ${item.unit}`,
+          'Quantity Sold': item.quantity,
+          'Unit Price': item.price,
+          'Total Price': (item.price * item.quantity).toFixed(2),
+          'Partial Sale': item.isPartial ? 'Yes' : 'No'
+        }))
+      );
       
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Billing');
@@ -37,13 +41,13 @@ const BillingExport = ({ cartItems }) => {
   };
 
   return (
-    <button 
-      onClick={handleExport} 
-      className="btn"
+    <Button 
+      variant="primary" 
+      onClick={handleExport}
       disabled={cartItems.length === 0}
     >
       Export to Excel
-    </button>
+    </Button>
   );
 };
 
