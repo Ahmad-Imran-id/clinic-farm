@@ -11,6 +11,7 @@ import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./hooks/useAuth";
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min';
 
 function App() {
   const { currentUser, role, loading } = useAuth();
