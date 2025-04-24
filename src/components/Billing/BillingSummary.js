@@ -3,7 +3,18 @@ import { Card, Button } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
 const BillingSummary = ({ cartItems, onCheckout, isLoading }) => {
-  const total = cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+  const calculateTotal = () => {
+    return cartItems.reduce((sum, item) => {
+      if (item.isPartial) {
+        // For partial items, calculate price per unit
+        const pricePerUnit = item.price / item.packSize;
+        return sum + (pricePerUnit * item.quantity);
+      }
+      return sum + (item.price * item.quantity);
+    }, 0);
+  };
+
+  const total = calculateTotal();
 
   return (
     <div className="billing-summary">
