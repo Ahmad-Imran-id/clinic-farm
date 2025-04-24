@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, ListGroup, Spinner, Alert } from 'react-bootstrap';
+import { Form, Button, ListGroup, Spinner, Alert, Card } from 'react-bootstrap';
 import { fetchProductByBarcode, fetchProductSuggestions } from '../../utils/firebaseUtils';
 import { getCurrentUserUid } from '../../utils/authUtils';
 
@@ -132,7 +132,7 @@ const BillingForm = ({ onAddToCart }) => {
                   min="1"
                   max={selectedProduct.unitsPerPack}
                   value={partialQty}
-                  onChange={(e) => setPartialQty(Math.min(selectedProduct.unitsPerPack, parseInt(e.target.value) || 1)}
+                  onChange={(e) => setPartialQty(Math.min(selectedProduct.unitsPerPack, parseInt(e.target.value) || 1))}
                   style={{ width: '80px' }}
                 />
                 <span className="ms-2">/ {selectedProduct.unitsPerPack} {selectedProduct.unitType || 'units'}</span>
