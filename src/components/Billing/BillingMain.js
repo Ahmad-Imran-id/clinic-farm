@@ -35,7 +35,7 @@ const BillingMain = () => {
   const handleUpdateQuantity = (index, newQuantity) => {
     setCartItems(prevItems => 
       prevItems.map((item, i) => 
-        i === index ? {...item, quantity: Math.max(1, parseInt(newQuantity) || 1) : item
+        i === index ? {...item, quantity: Math.max(1, parseInt(newQuantity) || 1)} : item
       )
     );
   };
