@@ -29,13 +29,16 @@ const BillingCart = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
                   {item.isPartial && <Badge bg="info" className="ms-2">Partial</Badge>}
                 </td>
                 <td>
-                  {item.packSize} {item.unit}
+                  {item.isPartial 
+                    ? `${item.quantity} out of ${item.packSize} ${item.unit}`
+                    : `${item.packSize} ${item.unit}`
+                  }
                 </td>
                 <td>
                   <input
                     type="number"
                     min="1"
-                    max={item.packSize}
+                    max={item.isPartial ? item.packSize : undefined}
                     value={item.quantity}
                     onChange={(e) => onUpdateQuantity(index, e.target.value)}
                     className="form-control form-control-sm"
@@ -43,7 +46,12 @@ const BillingCart = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
                   />
                 </td>
                 <td>₹{item.price.toFixed(2)}</td>
-                <td>₹{(item.price * item.quantity).toFixed(2)}</td>
+                <td>
+                  {item.isPartial 
+                    ? `₹${((item.price / item.packSize) * item.quantity).toFixed(2)}`
+                    : `₹${(item.price * item.quantity).toFixed(2)}`
+                  }
+                </td>
                 <td>
                   <button 
                     onClick={() => onRemoveItem(index)}
